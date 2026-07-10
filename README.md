@@ -25,7 +25,7 @@ active severe weather alerts at their respective locations.
 
 ## Setup guides
 
-- [`SETUP.md`](SETUP.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
+- [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
 - [`SETUP-OWM.md`](SETUP-OWM.md) — OpenWeatherMap poller and its Grafana dashboard
 
 ## Files
