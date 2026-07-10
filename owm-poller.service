@@ -1,0 +1,24 @@
+[Unit]
+Description=OpenWeatherMap Poller
+After=network-online.target influxdb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=owm-poller
+Group=owm-poller
+EnvironmentFile=/opt/scripts/owm-poller/owm-poller.env
+ExecStart=/opt/scripts/owm-poller/venv/bin/python3 /opt/scripts/owm-poller/owm_poller.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Basic hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/scripts/owm-poller
+
+[Install]
+WantedBy=multi-user.target

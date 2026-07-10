@@ -1,0 +1,24 @@
+[Unit]
+Description=Tempest Weather Station Poller
+After=network-online.target influxdb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tempest
+Group=tempest
+EnvironmentFile=/opt/scripts/tempest-poller/tempest-poller.env
+ExecStart=/opt/scripts/tempest-poller/venv/bin/python3 /opt/scripts/tempest-poller/tempest-poller.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Basic hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/scripts/tempest-poller
+
+[Install]
+WantedBy=multi-user.target
