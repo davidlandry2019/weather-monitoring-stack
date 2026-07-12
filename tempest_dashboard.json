@@ -33,7 +33,7 @@
   "uid": "tempest-weather-station",
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 31,
+  "version": 33,
   "refresh": "1m",
   "time": {
     "from": "now-24h",
@@ -793,7 +793,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"precip\")\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
+          "query": "import \"timezone\"\n\noption location = timezone.location(name: \"America/Chicago\")\n\nfrom(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"precip\")\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -832,7 +832,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"uv\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"uv\")\n  |> aggregateWindow(every: 10m, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
@@ -902,7 +902,7 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"solar_radiation\" or r._field == \"brightness\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"solar_radiation\" or r._field == \"brightness\")\n  |> aggregateWindow(every: 10m, fn: mean, createEmpty: false)",
           "refId": "A"
         }
       ],
