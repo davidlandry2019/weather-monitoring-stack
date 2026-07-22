@@ -1,0 +1,92 @@
+<svg width="960" height="560" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+<title>Tempest dashboard preview (mockup with placeholder data)</title>
+
+<rect width="960" height="560" fill="#111217"/>
+
+<!-- Top bar -->
+<rect x="0" y="0" width="960" height="40" fill="#181b1f"/>
+<text x="16" y="25" font-size="14" fill="#d8d9da" font-weight="600">Tempest Weather Stations</text>
+<rect x="700" y="8" width="130" height="24" rx="4" fill="#22252b" stroke="#33363c"/>
+<text x="712" y="24" font-size="11" fill="#8e8e8e">Station: All</text>
+<rect x="840" y="8" width="110" height="24" rx="4" fill="#22252b" stroke="#33363c"/>
+<text x="852" y="24" font-size="11" fill="#8e8e8e">Last 24 hours</text>
+
+<!-- Warning tiles row -->
+<g>
+<rect x="12" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="70" font-size="11" fill="#8e8e8e" font-weight="600">Freeze Warning</text>
+<rect x="24" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
+<text x="73" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Rivertown, OH</text>
+<text x="73" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">45 °F</text>
+<rect x="128" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
+<text x="177" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
+<text x="177" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">38 °F</text>
+</g>
+
+<g>
+<rect x="248" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="260" y="70" font-size="11" fill="#8e8e8e" font-weight="600">High Wind Warning</text>
+<rect x="260" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
+<text x="309" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Rivertown, OH</text>
+<text x="309" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">9 mph</text>
+<rect x="364" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
+<text x="413" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
+<text x="413" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">14 mph</text>
+</g>
+
+<g>
+<rect x="484" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="496" y="70" font-size="11" fill="#8e8e8e" font-weight="600">High Temperature Warning</text>
+<rect x="496" y="80" width="98" height="52" rx="3" fill="#ba7517"/>
+<text x="545" y="100" font-size="11" fill="#faeeda" text-anchor="middle">Rivertown, OH</text>
+<text x="545" y="120" font-size="16" fill="#faeeda" font-weight="700" text-anchor="middle">92 °F</text>
+<rect x="600" y="80" width="98" height="52" rx="3" fill="#639922"/>
+<text x="649" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
+<text x="649" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">78 °F</text>
+</g>
+
+<g>
+<rect x="720" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="732" y="70" font-size="11" fill="#8e8e8e" font-weight="600">Feels Like Warning</text>
+<rect x="732" y="80" width="98" height="52" rx="3" fill="#639922"/>
+<text x="781" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Rivertown, OH</text>
+<text x="781" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">94 °F</text>
+<rect x="836" y="80" width="98" height="52" rx="3" fill="#639922"/>
+<text x="885" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
+<text x="885" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">76 °F</text>
+</g>
+
+<!-- Severity summary table -->
+<rect x="12" y="148" width="936" height="118" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="166" font-size="11" fill="#8e8e8e" font-weight="600">Active Severe Weather Alerts (NWS)</text>
+<text x="24" y="190" font-size="11" fill="#8e8e8e">location</text>
+<text x="330" y="190" font-size="11" fill="#8e8e8e">Minor</text>
+<text x="500" y="190" font-size="11" fill="#8e8e8e">Moderate</text>
+<text x="680" y="190" font-size="11" fill="#8e8e8e">Severe</text>
+<text x="850" y="190" font-size="11" fill="#8e8e8e">Extreme</text>
+<line x1="24" y1="198" x2="924" y2="198" stroke="#2c2f36"/>
+<text x="24" y="222" font-size="12" fill="#d8d9da">Rivertown, OH (US)</text>
+<rect x="470" y="208" width="180" height="20" fill="#ba7517"/>
+<text x="640" y="222" font-size="11" fill="#412402" text-anchor="end" font-weight="700">1</text>
+<line x1="24" y1="232" x2="924" y2="232" stroke="#2c2f36"/>
+<text x="24" y="254" font-size="12" fill="#d8d9da">Lakeside, MI (US)</text>
+<rect x="640" y="240" width="220" height="20" fill="#a32d2d"/>
+<text x="850" y="254" font-size="11" fill="#fcebeb" text-anchor="end" font-weight="700">1</text>
+
+<!-- Representative graph panel -->
+<rect x="12" y="280" width="468" height="270" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="298" font-size="11" fill="#8e8e8e" font-weight="600">Air Temperature (feels like / dew point)</text>
+<polyline points="30,470 90,440 150,455 210,400 270,410 330,380 390,395 450,360" fill="none" stroke="#639922" stroke-width="2"/>
+<polyline points="30,480 90,460 150,470 210,435 270,445 330,420 390,430 450,405" fill="none" stroke="#378ADD" stroke-width="2"/>
+<polyline points="30,500 90,495 150,498 210,480 270,485 330,470 390,478 450,460" fill="none" stroke="#EF9F27" stroke-width="2"/>
+<text x="24" y="540" font-size="10" fill="#639922">— air_temperature</text>
+<text x="170" y="540" font-size="10" fill="#378ADD">— feels_like</text>
+<text x="300" y="540" font-size="10" fill="#EF9F27">— dew_point</text>
+
+<rect x="492" y="280" width="456" height="270" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="504" y="298" font-size="11" fill="#8e8e8e" font-weight="600">Station Locations</text>
+<rect x="504" y="310" width="432" height="230" rx="4" fill="#0d1117"/>
+<circle cx="620" cy="400" r="5" fill="#378ADD"/>
+<circle cx="760" cy="450" r="5" fill="#378ADD"/>
+<text x="960" y="558" font-size="9" fill="#5a5c61" text-anchor="end">Mockup preview - placeholder data, not a live screenshot</text>
+</svg>
