@@ -10,22 +10,35 @@ active severe weather alerts at their respective locations.
 
 ## Architecture
 
-![Deployment architecture](deployment-architecture.svg)
+![Data flow](deployment-architecture.svg)
 
-- **Poller host** runs both poller services and InfluxDB 2.x. Each
-  poller writes to its own bucket (`tempest`, `weathermap`) so the two
-  pipelines stay fully independent even though they share a host. This can
-  be a single VM/container, or you can split InfluxDB onto its own host if
-  you prefer.
-- **Grafana host** runs Grafana, which connects to InfluxDB over the
-  network (port 8086) using two separate least-privilege read tokens — one
-  per bucket. This can be the same host as the pollers, or a separate one.
-- NWS alerts are polled by **both** pollers independently, each on its own
+This shows the data flow, not physical hosts — each poller independently
+calls its own weather API plus NWS for alerts, and both write into the same
+InfluxDB instance under separate buckets (`tempest`, `weathermap`), which
+Grafana queries to render its dashboards.
+
+- **NWS alerts are polled by both pollers independently**, each on its own
   5-minute cycle, rather than as a shared/deduplicated service.
+- **Where things actually run**: the two pollers and InfluxDB can live on
+  one host or be split across multiple; Grafana can be the same host or a
+  separate one. This repo doesn't assume a specific physical layout —
+  see `SETUP.md` / `SETUP-OWM.md` for what each piece actually needs.
+
+## Dashboard previews
+
+Mockups showing the general layout and styling — not live screenshots.
+All location names, coordinates, and readings shown are fabricated
+placeholder data.
+
+**Tempest dashboard**
+![Tempest dashboard preview](tempest-dashboard-preview.svg)
+
+**OpenWeatherMap dashboard**
+![OpenWeatherMap dashboard preview](owm-dashboard-preview.svg)
 
 ## Setup guides
 
-- [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
+- [`SETUP.md`](SETUP.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
 - [`SETUP-OWM.md`](SETUP-OWM.md) — OpenWeatherMap poller and its Grafana dashboard
 
 ## Files
@@ -42,3 +55,5 @@ active severe weather alerts at their respective locations.
 | `owm_dashboard.json` | Grafana dashboard for OpenWeatherMap data |
 | `requirements.txt` | Shared Python dependencies for both pollers |
 | `deployment-architecture.svg` | Architecture diagram (this README) |
+| `tempest-dashboard-preview.svg` | Tempest dashboard mockup (this README) |
+| `owm-dashboard-preview.svg` | OpenWeatherMap dashboard mockup (this README) |
