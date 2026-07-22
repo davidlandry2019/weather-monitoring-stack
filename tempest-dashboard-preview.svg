@@ -1,92 +1,576 @@
-<svg width="960" height="560" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+<svg width="1200" height="1764" viewBox="0 0 1200 1764" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
 <title>Tempest dashboard preview (mockup with placeholder data)</title>
-
-<rect width="960" height="560" fill="#111217"/>
-
-<!-- Top bar -->
-<rect x="0" y="0" width="960" height="40" fill="#181b1f"/>
+<rect width="1200" height="1764" fill="#111217"/>
+<rect x="0" y="0" width="1200" height="40" fill="#181b1f"/>
 <text x="16" y="25" font-size="14" fill="#d8d9da" font-weight="600">Tempest Weather Stations</text>
-<rect x="700" y="8" width="130" height="24" rx="4" fill="#22252b" stroke="#33363c"/>
-<text x="712" y="24" font-size="11" fill="#8e8e8e">Station: All</text>
-<rect x="840" y="8" width="110" height="24" rx="4" fill="#22252b" stroke="#33363c"/>
-<text x="852" y="24" font-size="11" fill="#8e8e8e">Last 24 hours</text>
-
-<!-- Warning tiles row -->
-<g>
-<rect x="12" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<rect x="900" y="8" width="130" height="24" rx="4" fill="#22252b" stroke="#33363c"/>
+<text x="912" y="24" font-size="11" fill="#8e8e8e">Station: All</text>
+<rect x="1040" y="8" width="140" height="24" rx="4" fill="#22252b" stroke="#33363c"/>
+<text x="1052" y="24" font-size="11" fill="#8e8e8e">Last 24 hours</text>
+<rect x="12" y="52" width="288" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
 <text x="24" y="70" font-size="11" fill="#8e8e8e" font-weight="600">Freeze Warning</text>
-<rect x="24" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
-<text x="73" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Rivertown, OH</text>
-<text x="73" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">45 °F</text>
-<rect x="128" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
-<text x="177" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
-<text x="177" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">38 °F</text>
-</g>
-
-<g>
-<rect x="248" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
-<text x="260" y="70" font-size="11" fill="#8e8e8e" font-weight="600">High Wind Warning</text>
-<rect x="260" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
-<text x="309" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Rivertown, OH</text>
-<text x="309" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">9 mph</text>
-<rect x="364" y="80" width="98" height="52" rx="3" fill="#3b6d11"/>
-<text x="413" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
-<text x="413" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">14 mph</text>
-</g>
-
-<g>
-<rect x="484" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
-<text x="496" y="70" font-size="11" fill="#8e8e8e" font-weight="600">High Temperature Warning</text>
-<rect x="496" y="80" width="98" height="52" rx="3" fill="#ba7517"/>
-<text x="545" y="100" font-size="11" fill="#faeeda" text-anchor="middle">Rivertown, OH</text>
-<text x="545" y="120" font-size="16" fill="#faeeda" font-weight="700" text-anchor="middle">92 °F</text>
-<rect x="600" y="80" width="98" height="52" rx="3" fill="#639922"/>
-<text x="649" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
-<text x="649" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">78 °F</text>
-</g>
-
-<g>
-<rect x="720" y="52" width="228" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
-<text x="732" y="70" font-size="11" fill="#8e8e8e" font-weight="600">Feels Like Warning</text>
-<rect x="732" y="80" width="98" height="52" rx="3" fill="#639922"/>
-<text x="781" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Rivertown, OH</text>
-<text x="781" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">94 °F</text>
-<rect x="836" y="80" width="98" height="52" rx="3" fill="#639922"/>
-<text x="885" y="100" font-size="11" fill="#eaf3de" text-anchor="middle">Lakeside, MI</text>
-<text x="885" y="120" font-size="16" fill="#eaf3de" font-weight="700" text-anchor="middle">76 °F</text>
-</g>
-
-<!-- Severity summary table -->
-<rect x="12" y="148" width="936" height="118" rx="4" fill="#181b1f" stroke="#2c2f36"/>
-<text x="24" y="166" font-size="11" fill="#8e8e8e" font-weight="600">Active Severe Weather Alerts (NWS)</text>
-<text x="24" y="190" font-size="11" fill="#8e8e8e">location</text>
-<text x="330" y="190" font-size="11" fill="#8e8e8e">Minor</text>
-<text x="500" y="190" font-size="11" fill="#8e8e8e">Moderate</text>
-<text x="680" y="190" font-size="11" fill="#8e8e8e">Severe</text>
-<text x="850" y="190" font-size="11" fill="#8e8e8e">Extreme</text>
-<line x1="24" y1="198" x2="924" y2="198" stroke="#2c2f36"/>
-<text x="24" y="222" font-size="12" fill="#d8d9da">Rivertown, OH (US)</text>
-<rect x="470" y="208" width="180" height="20" fill="#ba7517"/>
-<text x="640" y="222" font-size="11" fill="#412402" text-anchor="end" font-weight="700">1</text>
-<line x1="24" y1="232" x2="924" y2="232" stroke="#2c2f36"/>
-<text x="24" y="254" font-size="12" fill="#d8d9da">Lakeside, MI (US)</text>
-<rect x="640" y="240" width="220" height="20" fill="#a32d2d"/>
-<text x="850" y="254" font-size="11" fill="#fcebeb" text-anchor="end" font-weight="700">1</text>
-
-<!-- Representative graph panel -->
-<rect x="12" y="280" width="468" height="270" rx="4" fill="#181b1f" stroke="#2c2f36"/>
-<text x="24" y="298" font-size="11" fill="#8e8e8e" font-weight="600">Air Temperature (feels like / dew point)</text>
-<polyline points="30,470 90,440 150,455 210,400 270,410 330,380 390,395 450,360" fill="none" stroke="#639922" stroke-width="2"/>
-<polyline points="30,480 90,460 150,470 210,435 270,445 330,420 390,430 450,405" fill="none" stroke="#378ADD" stroke-width="2"/>
-<polyline points="30,500 90,495 150,498 210,480 270,485 330,470 390,478 450,460" fill="none" stroke="#EF9F27" stroke-width="2"/>
-<text x="24" y="540" font-size="10" fill="#639922">— air_temperature</text>
-<text x="170" y="540" font-size="10" fill="#378ADD">— feels_like</text>
-<text x="300" y="540" font-size="10" fill="#EF9F27">— dew_point</text>
-
-<rect x="492" y="280" width="456" height="270" rx="4" fill="#181b1f" stroke="#2c2f36"/>
-<text x="504" y="298" font-size="11" fill="#8e8e8e" font-weight="600">Station Locations</text>
-<rect x="504" y="310" width="432" height="230" rx="4" fill="#0d1117"/>
-<circle cx="620" cy="400" r="5" fill="#378ADD"/>
-<circle cx="760" cy="450" r="5" fill="#378ADD"/>
-<text x="960" y="558" font-size="9" fill="#5a5c61" text-anchor="end">Mockup preview - placeholder data, not a live screenshot</text>
+<rect x="18.0" y="80" width="89.0" height="52" rx="3" fill="#3b6d11"/>
+<text x="24.0" y="98" font-size="8" fill="#eaf3de">Elm Grove, TX </text>
+<text x="101.0" y="120" font-size="13" fill="#eaf3de" font-weight="700" text-anchor="end">41 °F</text>
+<rect x="110.0" y="80" width="89.0" height="52" rx="3" fill="#3b6d11"/>
+<text x="116.0" y="98" font-size="8" fill="#eaf3de">Millbrook, OH </text>
+<text x="193.0" y="120" font-size="13" fill="#eaf3de" font-weight="700" text-anchor="end">38 °F</text>
+<rect x="202.0" y="80" width="89.0" height="52" rx="3" fill="#a32d2d"/>
+<text x="208.0" y="98" font-size="8" fill="#fcebeb">Ashford, CO (U</text>
+<text x="285.0" y="120" font-size="13" fill="#fcebeb" font-weight="700" text-anchor="end">102 °F</text>
+<rect x="308" y="52" width="288" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="320" y="70" font-size="11" fill="#8e8e8e" font-weight="600">High Wind Warning</text>
+<rect x="314.0" y="80" width="89.0" height="52" rx="3" fill="#3b6d11"/>
+<text x="320.0" y="98" font-size="8" fill="#eaf3de">Elm Grove, TX </text>
+<text x="397.0" y="120" font-size="13" fill="#eaf3de" font-weight="700" text-anchor="end">6.2 mph</text>
+<rect x="406.0" y="80" width="89.0" height="52" rx="3" fill="#3b6d11"/>
+<text x="412.0" y="98" font-size="8" fill="#eaf3de">Millbrook, OH </text>
+<text x="489.0" y="120" font-size="13" fill="#eaf3de" font-weight="700" text-anchor="end">8.05 mph</text>
+<rect x="498.0" y="80" width="89.0" height="52" rx="3" fill="#a32d2d"/>
+<text x="504.0" y="98" font-size="8" fill="#fcebeb">Ashford, CO (U</text>
+<text x="581.0" y="120" font-size="13" fill="#fcebeb" font-weight="700" text-anchor="end">41 mph</text>
+<rect x="604" y="52" width="288" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="616" y="70" font-size="11" fill="#8e8e8e" font-weight="600">High Temperature Warning</text>
+<rect x="610.0" y="80" width="89.0" height="52" rx="3" fill="#a32d2d"/>
+<text x="616.0" y="98" font-size="8" fill="#fcebeb">Elm Grove, TX </text>
+<text x="693.0" y="120" font-size="13" fill="#fcebeb" font-weight="700" text-anchor="end">102 °F</text>
+<rect x="702.0" y="80" width="89.0" height="52" rx="3" fill="#3b6d11"/>
+<text x="708.0" y="98" font-size="8" fill="#eaf3de">Millbrook, OH </text>
+<text x="785.0" y="120" font-size="13" fill="#eaf3de" font-weight="700" text-anchor="end">88 °F</text>
+<rect x="794.0" y="80" width="89.0" height="52" rx="3" fill="#ba7517"/>
+<text x="800.0" y="98" font-size="8" fill="#412402">Ashford, CO (U</text>
+<text x="877.0" y="120" font-size="13" fill="#412402" font-weight="700" text-anchor="end">94 °F</text>
+<rect x="900" y="52" width="288" height="88" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="912" y="70" font-size="11" fill="#8e8e8e" font-weight="600">Feels Like Warning</text>
+<rect x="906.0" y="80" width="89.0" height="52" rx="3" fill="#a32d2d"/>
+<text x="912.0" y="98" font-size="8" fill="#fcebeb">Elm Grove, TX </text>
+<text x="989.0" y="120" font-size="13" fill="#fcebeb" font-weight="700" text-anchor="end">118 °F</text>
+<rect x="998.0" y="80" width="89.0" height="52" rx="3" fill="#ba7517"/>
+<text x="1004.0" y="98" font-size="8" fill="#412402">Millbrook, OH </text>
+<text x="1081.0" y="120" font-size="13" fill="#412402" font-weight="700" text-anchor="end">91 °F</text>
+<rect x="1090.0" y="80" width="89.0" height="52" rx="3" fill="#ba7517"/>
+<text x="1096.0" y="98" font-size="8" fill="#412402">Ashford, CO (U</text>
+<text x="1173.0" y="120" font-size="13" fill="#412402" font-weight="700" text-anchor="end">96 °F</text>
+<rect x="12" y="152" width="1176" height="150" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="170" font-size="11" fill="#8e8e8e" font-weight="600">Active Severe Weather Alerts (NWS)</text>
+<text x="24" y="194" font-size="11" fill="#8e8e8e">location</text>
+<text x="380" y="194" font-size="11" fill="#8e8e8e">Minor</text>
+<text x="560" y="194" font-size="11" fill="#8e8e8e">Moderate</text>
+<text x="740" y="194" font-size="11" fill="#8e8e8e">Severe</text>
+<text x="920" y="194" font-size="11" fill="#8e8e8e">Extreme</text>
+<text x="1080" y="194" font-size="11" fill="#8e8e8e">Unknown</text>
+<line x1="24" y1="202" x2="1164" y2="202" stroke="#2c2f36"/>
+<text x="24" y="228" font-size="12" fill="#d8d9da">Fields End Rd (Elm Grove, TX (Un...</text>
+<rect x="540" y="214" width="160" height="20" fill="#ba7517"/>
+<text x="690" y="228" font-size="11" fill="#412402" text-anchor="end" font-weight="700">1</text>
+<rect x="720" y="214" width="180" height="20" fill="#a32d2d"/>
+<text x="890" y="228" font-size="11" fill="#fcebeb" text-anchor="end" font-weight="700">1</text>
+<rect x="1060" y="214" width="100" height="20" fill="#3b6d11"/>
+<text x="1150" y="228" font-size="11" fill="#eaf3de" text-anchor="end" font-weight="700">1</text>
+<text x="24" y="258" font-size="12" fill="#d8d9da">Prairie View Ln (Millbrook, OH (...</text>
+<rect x="360" y="244" width="140" height="20" fill="#c9a227"/>
+<text x="490" y="258" font-size="11" fill="#332a05" text-anchor="end" font-weight="700">1</text>
+<text x="24" y="288" font-size="12" fill="#d8d9da">Hilltop Farm (Ashford, CO (Unite...</text>
+<rect x="12" y="312" width="1176" height="130" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="330" font-size="11" fill="#8e8e8e" font-weight="600">NWS Alert Details</text>
+<text x="24" y="354" font-size="11" fill="#8e8e8e">city_name</text>
+<text x="280" y="354" font-size="11" fill="#8e8e8e">severity</text>
+<text x="380" y="354" font-size="11" fill="#8e8e8e">event</text>
+<text x="560" y="354" font-size="11" fill="#8e8e8e">urgency</text>
+<text x="680" y="354" font-size="11" fill="#8e8e8e">expires</text>
+<text x="860" y="354" font-size="11" fill="#8e8e8e">headline</text>
+<line x1="24" y1="362" x2="1164" y2="362" stroke="#2c2f36"/>
+<text x="24" y="386" font-size="11" fill="#d8d9da">Fields End Rd (Elm Grove, ...</text>
+<rect x="270" y="372" width="90" height="22" fill="#3b6d11"/>
+<text x="315" y="387" font-size="10" fill="#eaf3de" text-anchor="middle">Unknown</text>
+<text x="380" y="386" font-size="11" fill="#d8d9da">Air Quality Alert</text>
+<text x="560" y="386" font-size="11" fill="#d8d9da">Unknown</text>
+<text x="680" y="386" font-size="10" fill="#d8d9da">2026-07-22T17:45:00-05:00</text>
+<text x="860" y="386" font-size="10" fill="#d8d9da">Air Quality Alert issued today</text>
+<text x="24" y="414" font-size="11" fill="#d8d9da">Fields End Rd (Elm Grove, ...</text>
+<rect x="270" y="400" width="90" height="22" fill="#a32d2d"/>
+<text x="315" y="415" font-size="10" fill="#fcebeb" text-anchor="middle">Severe</text>
+<text x="380" y="414" font-size="11" fill="#d8d9da">Extreme Heat Warning</text>
+<text x="560" y="414" font-size="11" fill="#d8d9da">Expected</text>
+<text x="680" y="414" font-size="10" fill="#d8d9da">2026-07-23T02:00:00-05:00</text>
+<text x="860" y="414" font-size="10" fill="#d8d9da">Extreme Heat Warning issued today until tomorrow</text>
+<text x="24" y="442" font-size="11" fill="#d8d9da">Prairie View Ln (Millbrook...</text>
+<rect x="270" y="428" width="90" height="22" fill="#c9a227"/>
+<text x="315" y="443" font-size="10" fill="#332a05" text-anchor="middle">Minor</text>
+<text x="380" y="442" font-size="11" fill="#d8d9da">Frost Advisory</text>
+<text x="560" y="442" font-size="11" fill="#d8d9da">Expected</text>
+<text x="680" y="442" font-size="10" fill="#d8d9da">2026-07-23T13:00:00-05:00</text>
+<text x="860" y="442" font-size="10" fill="#d8d9da">Frost Advisory issued today until tomorrow morning</text>
+<rect x="12" y="452" width="578" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="470" font-size="11" fill="#8e8e8e" font-weight="600">Air Temperature (feels like / dew point)</text>
+<polyline points="30,632 90,592 150,602 210,542 270,547 330,512 390,517 450,507" fill="none" stroke="#639922" stroke-width="2"/>
+<polyline points="30,572 90,522 150,532 210,492 270,497 330,482 390,487 450,477" fill="none" stroke="#378ADD" stroke-width="2"/>
+<polyline points="30,652 90,647 150,650 210,632 270,637 330,622 390,630 450,612" fill="none" stroke="#EF9F27" stroke-width="2"/>
+<text x="24" y="674" font-size="10" fill="#639922">— air_temperature</text>
+<text x="170" y="674" font-size="10" fill="#378ADD">— feels_like</text>
+<text x="300" y="674" font-size="10" fill="#EF9F27">— dew_point</text>
+<rect x="610" y="452" width="578" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="622" y="470" font-size="11" fill="#8e8e8e" font-weight="600">Relative Humidity</text>
+<polyline points="628,569 680,582 732,584 784,595 836,605 888,618 940,629 992,640 1044,639" fill="none" stroke="#639922" stroke-width="2"/>
+<text x="622" y="674" font-size="10" fill="#639922">— relative_humidity</text>
+<rect x="12" y="692" width="578" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="710" font-size="11" fill="#8e8e8e" font-weight="600">Wind Speed (avg / gust / lull)</text>
+<polyline points="30,868 82,869 134,861 186,845 238,843 290,808 342,795 394,869 446,801" fill="none" stroke="#378ADD" stroke-width="1.5"/>
+<polyline points="30,832 82,788 134,804 186,829 238,800 290,782 342,822 394,857 446,837" fill="none" stroke="#e34948" stroke-width="1.5"/>
+<polyline points="30,833 82,844 134,852 186,868 238,860 290,844 342,874 394,876 446,839" fill="none" stroke="#639922" stroke-width="1.5"/>
+<text x="24" y="914" font-size="10" fill="#378ADD">— wind_avg</text>
+<text x="130" y="914" font-size="10" fill="#e34948">— wind_gust</text>
+<text x="240" y="914" font-size="10" fill="#639922">— wind_lull</text>
+<rect x="610" y="692" width="578" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="622" y="710" font-size="11" fill="#8e8e8e" font-weight="600">Wind Direction</text>
+<circle cx="628.0" cy="775.6" r="2" fill="#639922"/>
+<circle cx="635.5" cy="749.6" r="2" fill="#639922"/>
+<circle cx="643.0" cy="824.6" r="2" fill="#639922"/>
+<circle cx="650.5" cy="737.9" r="2" fill="#639922"/>
+<circle cx="658.0" cy="807.4" r="2" fill="#639922"/>
+<circle cx="665.5" cy="781.9" r="2" fill="#639922"/>
+<circle cx="673.0" cy="735.7" r="2" fill="#639922"/>
+<circle cx="680.5" cy="803.1" r="2" fill="#639922"/>
+<circle cx="688.0" cy="732.6" r="2" fill="#639922"/>
+<circle cx="695.5" cy="792.0" r="2" fill="#639922"/>
+<circle cx="703.0" cy="737.5" r="2" fill="#639922"/>
+<circle cx="710.5" cy="740.6" r="2" fill="#639922"/>
+<circle cx="718.0" cy="790.7" r="2" fill="#639922"/>
+<circle cx="725.5" cy="851.0" r="2" fill="#639922"/>
+<circle cx="733.0" cy="745.6" r="2" fill="#639922"/>
+<circle cx="740.5" cy="760.5" r="2" fill="#639922"/>
+<circle cx="748.0" cy="821.1" r="2" fill="#639922"/>
+<circle cx="755.5" cy="869.2" r="2" fill="#639922"/>
+<circle cx="763.0" cy="813.6" r="2" fill="#639922"/>
+<circle cx="770.5" cy="786.5" r="2" fill="#639922"/>
+<circle cx="778.0" cy="873.4" r="2" fill="#639922"/>
+<circle cx="785.5" cy="734.0" r="2" fill="#639922"/>
+<circle cx="793.0" cy="855.8" r="2" fill="#639922"/>
+<circle cx="800.5" cy="770.4" r="2" fill="#639922"/>
+<circle cx="808.0" cy="748.6" r="2" fill="#639922"/>
+<circle cx="815.5" cy="744.7" r="2" fill="#639922"/>
+<circle cx="823.0" cy="773.3" r="2" fill="#639922"/>
+<circle cx="830.5" cy="849.4" r="2" fill="#639922"/>
+<circle cx="838.0" cy="754.1" r="2" fill="#639922"/>
+<circle cx="845.5" cy="814.2" r="2" fill="#639922"/>
+<circle cx="853.0" cy="822.8" r="2" fill="#639922"/>
+<circle cx="860.5" cy="782.9" r="2" fill="#639922"/>
+<circle cx="868.0" cy="809.2" r="2" fill="#639922"/>
+<circle cx="875.5" cy="736.4" r="2" fill="#639922"/>
+<circle cx="883.0" cy="735.9" r="2" fill="#639922"/>
+<circle cx="890.5" cy="757.9" r="2" fill="#639922"/>
+<circle cx="898.0" cy="829.1" r="2" fill="#639922"/>
+<circle cx="905.5" cy="791.1" r="2" fill="#639922"/>
+<circle cx="913.0" cy="774.1" r="2" fill="#639922"/>
+<circle cx="920.5" cy="814.8" r="2" fill="#639922"/>
+<circle cx="928.0" cy="795.0" r="2" fill="#639922"/>
+<circle cx="935.5" cy="772.0" r="2" fill="#639922"/>
+<circle cx="943.0" cy="846.2" r="2" fill="#639922"/>
+<circle cx="950.5" cy="831.8" r="2" fill="#639922"/>
+<circle cx="958.0" cy="763.6" r="2" fill="#639922"/>
+<circle cx="965.5" cy="813.2" r="2" fill="#639922"/>
+<circle cx="973.0" cy="805.8" r="2" fill="#639922"/>
+<circle cx="980.5" cy="858.3" r="2" fill="#639922"/>
+<circle cx="988.0" cy="836.4" r="2" fill="#639922"/>
+<circle cx="995.5" cy="770.2" r="2" fill="#639922"/>
+<circle cx="1003.0" cy="874.0" r="2" fill="#639922"/>
+<circle cx="1010.5" cy="744.7" r="2" fill="#639922"/>
+<circle cx="1018.0" cy="789.7" r="2" fill="#639922"/>
+<circle cx="1025.5" cy="840.6" r="2" fill="#639922"/>
+<circle cx="1033.0" cy="749.8" r="2" fill="#639922"/>
+<circle cx="1040.5" cy="800.3" r="2" fill="#639922"/>
+<circle cx="1048.0" cy="732.9" r="2" fill="#639922"/>
+<circle cx="1055.5" cy="827.2" r="2" fill="#639922"/>
+<circle cx="1063.0" cy="841.7" r="2" fill="#639922"/>
+<circle cx="1070.5" cy="813.0" r="2" fill="#639922"/>
+<circle cx="1078.0" cy="858.3" r="2" fill="#639922"/>
+<circle cx="1085.5" cy="774.1" r="2" fill="#639922"/>
+<circle cx="1093.0" cy="831.3" r="2" fill="#639922"/>
+<circle cx="1100.5" cy="816.2" r="2" fill="#639922"/>
+<circle cx="1108.0" cy="814.0" r="2" fill="#639922"/>
+<circle cx="1115.5" cy="795.4" r="2" fill="#639922"/>
+<circle cx="1123.0" cy="853.0" r="2" fill="#639922"/>
+<circle cx="1130.5" cy="868.7" r="2" fill="#639922"/>
+<circle cx="1138.0" cy="798.1" r="2" fill="#639922"/>
+<circle cx="1145.5" cy="826.6" r="2" fill="#639922"/>
+<text x="622" y="914" font-size="10" fill="#639922">— wind_direction</text>
+<rect x="12" y="932" width="578" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="950" font-size="11" fill="#8e8e8e" font-weight="600">Station / Sea Level Pressure</text>
+<polyline points="30,990 82,992 134,994 186,993 238,992 290,993 342,992 394,990 446,993" fill="none" stroke="#8b3ac2" stroke-width="2"/>
+<polyline points="30,1032 82,1031 134,1034 186,1030 238,1033 290,1030 342,1031 394,1032 446,1031" fill="none" stroke="#378ADD" stroke-width="2"/>
+<text x="24" y="1154" font-size="10" fill="#8b3ac2">— sea_level_pressure</text>
+<text x="180" y="1154" font-size="10" fill="#378ADD">— station_pressure</text>
+<rect x="610" y="932" width="578" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="622" y="950" font-size="11" fill="#8e8e8e" font-weight="600">Rain Accumulation (daily)</text>
+<text x="839" y="1042" font-size="26" fill="#d8d9da" font-weight="700">0 in</text>
+<line x1="628" y1="1082" x2="1170" y2="1082" stroke="#3d4148"/>
+<text x="622" y="1154" font-size="10" fill="#8e8e8e">Total: 0 in</text>
+<rect x="12" y="1172" width="285" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="1190" font-size="11" fill="#8e8e8e" font-weight="600">UV Index</text>
+<rect x="305" y="1172" width="285" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="317" y="1190" font-size="11" fill="#8e8e8e" font-weight="600">Solar Radiation / Brightness</text>
+<rect x="598" y="1172" width="285" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="610" y="1190" font-size="11" fill="#8e8e8e" font-weight="600">Lightning Strikes (last hour)</text>
+<rect x="891" y="1172" width="285" height="230" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="903" y="1190" font-size="11" fill="#8e8e8e" font-weight="600">Lightning Strikes</text>
+<polyline points="30,1352 60,1352 90,1332 120,1307 150,1282 180,1257 210,1232 240,1257 270,1282" fill="none" stroke="#639922" stroke-width="2"/>
+<polyline points="323,1352 353,1352 383,1324 413,1296 443,1268 473,1240 503,1212 533,1240 563,1268" fill="none" stroke="#EF9F27" stroke-width="2"/>
+<text x="740" y="1302" font-size="42" fill="#639922" font-weight="700" text-anchor="middle">0</text>
+<rect x="909" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="941" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="973" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="1005" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="1037" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="1069" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="1101" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="1133" y="1347" width="14" height="2" fill="#3d4148"/>
+<rect x="12" y="1422" width="1176" height="300" rx="4" fill="#181b1f" stroke="#2c2f36"/>
+<text x="24" y="1440" font-size="11" fill="#8e8e8e" font-weight="600">Lightning Strikes: Time vs Distance</text>
+<rect x="40" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1442" width="43" height="13" fill="#946d4a"/>
+<rect x="524" y="1442" width="43" height="13" fill="#714522"/>
+<rect x="568" y="1442" width="43" height="13" fill="#ac8965"/>
+<rect x="612" y="1442" width="43" height="13" fill="#b89672"/>
+<rect x="656" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="700" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1442" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1456" width="43" height="13" fill="#714522"/>
+<rect x="392" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1456" width="43" height="13" fill="#89603d"/>
+<rect x="480" y="1456" width="43" height="13" fill="#653715"/>
+<rect x="524" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1456" width="43" height="13" fill="#946d4a"/>
+<rect x="612" y="1456" width="43" height="13" fill="#7d522f"/>
+<rect x="656" y="1456" width="43" height="13" fill="#89603d"/>
+<rect x="700" y="1456" width="43" height="13" fill="#ac8965"/>
+<rect x="744" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1456" width="43" height="13" fill="#653715"/>
+<rect x="1052" y="1456" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1470" width="43" height="13" fill="#89603d"/>
+<rect x="436" y="1470" width="43" height="13" fill="#7d522f"/>
+<rect x="480" y="1470" width="43" height="13" fill="#a07b57"/>
+<rect x="524" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="612" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="656" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="700" y="1470" width="43" height="13" fill="#a07b57"/>
+<rect x="744" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1470" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1484" width="43" height="13" fill="#b89672"/>
+<rect x="524" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="612" y="1484" width="43" height="13" fill="#c4a47f"/>
+<rect x="656" y="1484" width="43" height="13" fill="#a07b57"/>
+<rect x="700" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1484" width="43" height="13" fill="#714522"/>
+<rect x="832" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1484" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1498" width="43" height="13" fill="#b89672"/>
+<rect x="524" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1498" width="43" height="13" fill="#7d522f"/>
+<rect x="612" y="1498" width="43" height="13" fill="#7d522f"/>
+<rect x="656" y="1498" width="43" height="13" fill="#cfb18c"/>
+<rect x="700" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1498" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1512" width="43" height="13" fill="#dbbf9a"/>
+<rect x="568" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="612" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="656" y="1512" width="43" height="13" fill="#b89672"/>
+<rect x="700" y="1512" width="43" height="13" fill="#89603d"/>
+<rect x="744" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1512" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1526" width="43" height="13" fill="#dbbf9a"/>
+<rect x="480" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1526" width="43" height="13" fill="#a07b57"/>
+<rect x="612" y="1526" width="43" height="13" fill="#ac8965"/>
+<rect x="656" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="700" y="1526" width="43" height="13" fill="#ffe8c2"/>
+<rect x="744" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1526" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1540" width="43" height="13" fill="#946d4a"/>
+<rect x="480" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1540" width="43" height="13" fill="#c4a47f"/>
+<rect x="568" y="1540" width="43" height="13" fill="#f3dab4"/>
+<rect x="612" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="656" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="700" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1540" width="43" height="13" fill="#89603d"/>
+<rect x="788" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1540" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1554" width="43" height="13" fill="#dbbf9a"/>
+<rect x="480" y="1554" width="43" height="13" fill="#c4a47f"/>
+<rect x="524" y="1554" width="43" height="13" fill="#ac8965"/>
+<rect x="568" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="612" y="1554" width="43" height="13" fill="#89603d"/>
+<rect x="656" y="1554" width="43" height="13" fill="#89603d"/>
+<rect x="700" y="1554" width="43" height="13" fill="#cfb18c"/>
+<rect x="744" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1554" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1568" width="43" height="13" fill="#653715"/>
+<rect x="392" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1568" width="43" height="13" fill="#a07b57"/>
+<rect x="524" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1568" width="43" height="13" fill="#c4a47f"/>
+<rect x="612" y="1568" width="43" height="13" fill="#dbbf9a"/>
+<rect x="656" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="700" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1568" width="43" height="13" fill="#714522"/>
+<rect x="832" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1568" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1582" width="43" height="13" fill="#c4a47f"/>
+<rect x="480" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="568" y="1582" width="43" height="13" fill="#b89672"/>
+<rect x="612" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="656" y="1582" width="43" height="13" fill="#c4a47f"/>
+<rect x="700" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1582" width="43" height="13" fill="#7d522f"/>
+<rect x="964" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1582" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1596" width="43" height="13" fill="#89603d"/>
+<rect x="480" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1596" width="43" height="13" fill="#714522"/>
+<rect x="568" y="1596" width="43" height="13" fill="#714522"/>
+<rect x="612" y="1596" width="43" height="13" fill="#b89672"/>
+<rect x="656" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="700" y="1596" width="43" height="13" fill="#714522"/>
+<rect x="744" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1596" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1610" width="43" height="13" fill="#714522"/>
+<rect x="568" y="1610" width="43" height="13" fill="#ac8965"/>
+<rect x="612" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="656" y="1610" width="43" height="13" fill="#653715"/>
+<rect x="700" y="1610" width="43" height="13" fill="#a07b57"/>
+<rect x="744" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1610" width="43" height="13" fill="#1a1d24"/>
+<rect x="40" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="84" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="128" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="172" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="216" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="260" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="304" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="348" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="392" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="436" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="480" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="524" y="1624" width="43" height="13" fill="#89603d"/>
+<rect x="568" y="1624" width="43" height="13" fill="#ac8965"/>
+<rect x="612" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="656" y="1624" width="43" height="13" fill="#a07b57"/>
+<rect x="700" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="744" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="788" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="832" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="876" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="920" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="964" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="1008" y="1624" width="43" height="13" fill="#1a1d24"/>
+<rect x="1052" y="1624" width="43" height="13" fill="#1a1d24"/>
+<text x="24" y="1682" font-size="9" fill="#8e8e8e">0 mi</text>
+<text x="24" y="1452" font-size="9" fill="#8e8e8e">26 mi</text>
+<text x="40" y="1702" font-size="9" fill="#8e8e8e">12:00</text>
+<text x="290" y="1702" font-size="9" fill="#8e8e8e">14:00</text>
+<text x="540" y="1702" font-size="9" fill="#8e8e8e">16:00</text>
+<text x="790" y="1702" font-size="9" fill="#8e8e8e">18:00</text>
+<defs><linearGradient id="heatgrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5a2a08"/><stop offset="100%" stop-color="#ffe8c2"/></linearGradient></defs>
+<rect x="24" y="1708" width="200" height="8" fill="url(#heatgrad)"/>
+<text x="24" y="1720" font-size="9" fill="#8e8e8e">1 strikes</text>
+<text x="200" y="1720" font-size="9" fill="#8e8e8e" text-anchor="end">14 strikes</text>
+<text x="1188" y="1744" font-size="9" fill="#5a5c61" text-anchor="end">Mockup preview - placeholder data, not a live screenshot</text>
 </svg>
