@@ -22,7 +22,7 @@ Grafana queries to render its dashboards.
 - **Where things actually run**: the two pollers and InfluxDB can live on
   one host or be split across multiple; Grafana can be the same host or a
   separate one. This repo doesn't assume a specific physical layout —
-  see `SETUP.md` / `SETUP-OWM.md` for what each piece actually needs.
+  see `SETUP-TEMPEST.md` / `SETUP-OWM.md` for what each piece actually needs.
 
 ## Dashboard previews
 
@@ -38,7 +38,7 @@ placeholder data.
 
 ## Setup guides
 
-- [`SETUP.md`](SETUP.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
+- [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
 - [`SETUP-OWM.md`](SETUP-OWM.md) — OpenWeatherMap poller and its Grafana dashboard
 
 ## Files
