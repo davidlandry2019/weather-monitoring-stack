@@ -24,6 +24,14 @@ Grafana queries to render its dashboards.
   separate one. This repo doesn't assume a specific physical layout —
   see `SETUP-TEMPEST.md` / `SETUP-OWM.md` for what each piece actually needs.
 
+## Recommended versions
+
+- **OS**: Linux with systemd (Ubuntu/Debian recommended) for the poller hosts
+- **InfluxDB**: 2.x
+- **Grafana**: 8+ (needs the InfluxDB Flux data source)
+
+See `SETUP-TEMPEST.md` / `SETUP-OWM.md` for full system requirements.
+
 ## Dashboard previews
 
 Mockups showing the general layout and styling — not live screenshots.
