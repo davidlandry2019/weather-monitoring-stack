@@ -49,6 +49,10 @@ placeholder data.
 - [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
 - [`SETUP-OWM.md`](SETUP-OWM.md) — OpenWeatherMap poller and its Grafana dashboard
 
+## License
+
+MIT — see [`LICENSE`](LICENSE).
+
 ## Files
 
 | File | Purpose |
