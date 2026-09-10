@@ -3,7 +3,7 @@
 Two independent data pipelines feeding a shared InfluxDB instance and Grafana:
 
 - **Tempest** — polls your own WeatherFlow Tempest station(s) directly
-- **OpenWeatherMap** — polls current conditions for arbitrary cities
+- **OpenWeatherMap** — polls current conditions for defined openweathermap locations
 
 Both pipelines also independently check the National Weather Service for
 active severe weather alerts at their respective locations.
