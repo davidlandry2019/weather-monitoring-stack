@@ -8,6 +8,8 @@ Two independent data pipelines feeding a shared InfluxDB instance and Grafana:
 Both pipelines also independently check the National Weather Service for
 active severe weather alerts at their respective locations.
 
+See the [Releases page](https://github.com/davidlandry2019/weather-monitoring-stack/releases) for tagged versions.
+
 ## Architecture
 
 ![Data flow](deployment-architecture.svg)
