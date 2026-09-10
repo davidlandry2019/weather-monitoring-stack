@@ -53,6 +53,10 @@ placeholder data.
 
 MIT — see [`LICENSE`](LICENSE).
 
+## Support
+
+If this project is useful to you, consider [buying me a coffee](https://paypal.me/DavidLandry2019).
+
 ## Files
 
 | File | Purpose |
