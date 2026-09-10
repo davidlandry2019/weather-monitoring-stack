@@ -83,6 +83,8 @@ InfluxDB's UI is at `http://<container-ip>:8086` if you want to manage it visual
 2. Under "Data Authorizations," create a **Personal Use Token**.
 3. Find your **Station ID** — visible in the station settings page URL or via `https://swd.weatherflow.com/swd/rest/stations?token=YOUR_TOKEN`.
 
+> **Viewing someone else's station**: your Personal Use Token only grants access to stations you own. To poll a station owned by someone else, that station's owner must first share it with your Tempest account (from their station's settings on tempestwx.com, under station sharing/permissions) before its Station ID will work with your token.
+
 ## 3. Deploy the poller
 
 ```bash
