@@ -1,0 +1,3 @@
+# Test-suite dependencies (deploy/install.sh runs the tests before restarting the pollers).
+-r requirements-migrate.txt
+pytest>=8.0

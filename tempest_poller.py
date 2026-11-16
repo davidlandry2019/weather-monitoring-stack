@@ -2,7 +2,7 @@
 """
 Tempest Weather Station Poller
 Polls the WeatherFlow Tempest cloud REST API for one or more stations and
-writes observations to InfluxDB 2.x. Each station's human-readable location
+writes observations to ClickHouse. Each station's human-readable location
 name comes from a manual override map (STATION_LOCATION_OVERRIDES) - there
 is no automatic geocoding.
 
@@ -10,10 +10,16 @@ Configuration is via environment variables (see tempest-poller.env.example):
   TEMPEST_TOKEN        - WeatherFlow personal access token
   TEMPEST_STATION_IDS  - Comma-separated list of station IDs, e.g. "123456,789012"
   TEMPEST_STATION_ID   - Legacy single-station variable (used if _IDS not set)
-  INFLUX_URL           - e.g. http://localhost:8086
-  INFLUX_TOKEN         - InfluxDB API token with write access
-  INFLUX_ORG           - InfluxDB organization name
-  INFLUX_BUCKET        - InfluxDB bucket name
+  CLICKHOUSE_HOST      - default localhost
+  CLICKHOUSE_PORT      - HTTP interface port, default 8123 (8443 with CLICKHOUSE_SECURE)
+  CLICKHOUSE_USER      - ClickHouse user with INSERT on the database (default "default")
+  CLICKHOUSE_PASSWORD  - that user's password
+  CLICKHOUSE_SECURE    - "true" to connect over HTTPS (default false)
+  CLICKHOUSE_DATABASE  - database name (default tempest)
+  CLICKHOUSE_AUTO_CREATE_SCHEMA - "true" (default) runs CREATE ... IF NOT EXISTS
+                         for the database/tables at startup; set "false" when the
+                         poller's user only has INSERT and you've created the
+                         schema yourself with clickhouse_schema.py
   POLL_INTERVAL        - Seconds between polls (default 60)
   STATION_LOCATION_OVERRIDES - Manual location names, one entry per station.
                          Format: "station_id:Location Name;station_id2:Other Location"
@@ -26,6 +32,16 @@ Configuration is via environment variables (see tempest-poller.env.example):
                          at write time; "metric" stores the API's raw values as-is
 
 Release notes:
+  v2.0 - Storage moved from InfluxDB 2.x to ClickHouse (InfluxData has put
+         Flux, which the dashboards were written in, into maintenance mode,
+         and InfluxDB 3 doesn't run it at all). Rows go to the
+         tempest_observations / tempest_nws_alerts / tempest_nws_alert_summary
+         tables defined in clickhouse_schema.py - one wide row per
+         observation, same field names and units as before. Unknown numeric
+         fields the API adds in future land in the `extra` map column instead
+         of being dropped. The startup write check now inserts into
+         poller_healthcheck. INFLUX_* variables are replaced by CLICKHOUSE_*.
+         Historical data can be copied over with migrate_influx_to_clickhouse.py.
   v1.9 - Fixed pressure_trend being stored as a tag instead of a field. Since
          it changes with actual conditions (steady/rising/falling), tagging
          it fragmented series identity - every time it changed, the station
@@ -93,11 +109,10 @@ import os
 import sys
 import time
 import logging
-from datetime import datetime
 
 import requests
-from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
+
+import clickhouse_schema as chs
 
 logging.basicConfig(
     level=logging.INFO,
@@ -111,10 +126,9 @@ TEMPEST_TOKEN = os.environ.get("TEMPEST_TOKEN")
 _station_ids_raw = os.environ.get("TEMPEST_STATION_IDS") or os.environ.get("TEMPEST_STATION_ID", "")
 STATION_IDS = [s.strip() for s in _station_ids_raw.split(",") if s.strip()]
 
-INFLUX_URL = os.environ.get("INFLUX_URL", "http://localhost:8086")
-INFLUX_TOKEN = os.environ.get("INFLUX_TOKEN")
-INFLUX_ORG = os.environ.get("INFLUX_ORG")
-INFLUX_BUCKET = os.environ.get("INFLUX_BUCKET", "tempest")
+CLICKHOUSE = chs.clickhouse_settings_from_env()
+CLICKHOUSE_DATABASE = os.environ.get("CLICKHOUSE_DATABASE", chs.PIPELINES["tempest"]["default_database"])
+CLICKHOUSE_AUTO_CREATE_SCHEMA = chs.env_bool("CLICKHOUSE_AUTO_CREATE_SCHEMA", True)
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "60"))
 
 # Manual per-station location name overrides.
@@ -196,18 +210,18 @@ FIELD_UNIT_CONVERTERS = {
 
 TEMPEST_API_URL = "https://swd.weatherflow.com/swd/rest/observations/station/{station_id}"
 
-# Non-numeric observation fields that should become string fields rather than
-# tags (they change with actual conditions, so tagging them would fragment
-# series identity and cause the same station to appear as multiple series)
+# Non-numeric observation fields stored as string columns
 OBS_STRING_FIELDS = {"pressure_trend"}
 
 # Fields to skip entirely (identifiers/timestamps handled separately)
 OBS_SKIP_FIELDS = {"timestamp"}
 
+# Numeric obs fields with their own column; anything else numeric goes into
+# the `extra` map column
+OBS_FLOAT_COLUMNS = set(chs.TEMPEST_FLOAT_FIELDS)
+
 REQUIRED_ENV = {
     "TEMPEST_TOKEN": TEMPEST_TOKEN,
-    "INFLUX_TOKEN": INFLUX_TOKEN,
-    "INFLUX_ORG": INFLUX_ORG,
 }
 
 
@@ -218,6 +232,11 @@ def validate_config():
         sys.exit(1)
     if not STATION_IDS:
         log.error("No station IDs configured - set TEMPEST_STATION_IDS (comma-separated) or TEMPEST_STATION_ID")
+        sys.exit(1)
+    try:
+        chs.validate_ident(CLICKHOUSE_DATABASE)
+    except ValueError as e:
+        log.error("CLICKHOUSE_DATABASE: %s", e)
         sys.exit(1)
 
 
@@ -234,8 +253,9 @@ def fetch_observations(station_id):
     return resp.json()
 
 
-def build_points(data, fallback_station_id):
-    points = []
+def build_rows(data, fallback_station_id):
+    """Turn one station observation response into tempest_observations rows."""
+    rows = []
     station_id = str(data.get("station_id", fallback_station_id))
     station_name = data.get("station_name", "")
     latitude = data.get("latitude")
@@ -253,16 +273,15 @@ def build_points(data, fallback_station_id):
             log.warning("Skipping observation with no timestamp")
             continue
 
-        point = Point("tempest_observations").tag("station_id", station_id)
-        if station_name:
-            point = point.tag("station_name", station_name)
-        if location_name:
-            point = point.tag("location_name", location_name)
-
-        if latitude is not None:
-            point = point.field("latitude", float(latitude))
-        if longitude is not None:
-            point = point.field("longitude", float(longitude))
+        row = {
+            "time": int(epoch),
+            "station_id": station_id,
+            "station_name": station_name or "",
+            "location_name": location_name or "",
+            "latitude": float(latitude) if latitude is not None else None,
+            "longitude": float(longitude) if longitude is not None else None,
+        }
+        extra = {}
 
         for key, value in obs.items():
             if key in OBS_SKIP_FIELDS:
@@ -271,21 +290,25 @@ def build_points(data, fallback_station_id):
                 continue
 
             if key in OBS_STRING_FIELDS:
-                point = point.field(key, str(value))
+                row[key] = str(value)
                 continue
 
             try:
                 float_value = float(value)
-                if TEMPEST_UNITS == "imperial" and key in FIELD_UNIT_CONVERTERS:
-                    float_value = FIELD_UNIT_CONVERTERS[key](float_value)
-                point = point.field(key, float_value)
             except (TypeError, ValueError):
                 log.debug("Skipping non-numeric field %s=%r", key, value)
+                continue
+            if TEMPEST_UNITS == "imperial" and key in FIELD_UNIT_CONVERTERS:
+                float_value = FIELD_UNIT_CONVERTERS[key](float_value)
+            if key in OBS_FLOAT_COLUMNS:
+                row[key] = float_value
+            else:
+                extra[key] = float_value
 
-        point = point.time(int(epoch), WritePrecision.S)
-        points.append(point)
+        row["extra"] = extra
+        rows.append(row)
 
-    return points
+    return rows
 
 
 def fetch_nws_alerts(lat, lon):
@@ -300,52 +323,41 @@ def fetch_nws_alerts(lat, lon):
     return resp.json()
 
 
-def build_nws_points(station_id, station_name, location_name, alerts_json):
+def build_nws_rows(station_id, station_name, location_name, alerts_json, now=None):
     """
-    Build InfluxDB points from an NWS alerts response: one summary point
-    (alert_count, max_severity_rank) for easy dashboard threshold coloring,
-    plus one detail point per currently active alert.
+    Build rows from an NWS alerts response: one detail row per currently
+    active alert (tempest_nws_alerts) plus one summary row (alert_count,
+    max_severity_rank) for easy dashboard threshold coloring
+    (tempest_nws_alert_summary). Both are stamped with the poll time.
+    Returns (alert_rows, summary_row).
     """
-    points = []
     features = alerts_json.get("features", [])
-    now = datetime.utcnow()
+    now = int(time.time()) if now is None else now
+    common = {
+        "time": now,
+        "station_id": station_id,
+        "station_name": station_name or "",
+        "location_name": location_name or "",
+    }
     max_rank = 0
+    alert_rows = []
 
     for feature in features:
         props = feature.get("properties", {})
-        event = props.get("event", "Unknown")
-        severity = props.get("severity", "Unknown")
+        severity = props.get("severity") or "Unknown"
         max_rank = max(max_rank, NWS_SEVERITY_RANK.get(severity, 0))
+        alert_rows.append({
+            **common,
+            "event": props.get("event") or "Unknown",
+            "severity": severity,
+            "headline": props.get("headline") or "",
+            "urgency": props.get("urgency") or "Unknown",
+            "expires": props.get("expires") or "",
+            "active": 1,
+        })
 
-        point = (
-            Point("tempest_nws_alerts")
-            .tag("station_id", station_id)
-            .tag("event", event)
-            .tag("severity", severity)
-        )
-        if station_name:
-            point = point.tag("station_name", station_name)
-        if location_name:
-            point = point.tag("location_name", location_name)
-
-        point = point.field("headline", props.get("headline", ""))
-        point = point.field("urgency", props.get("urgency", "Unknown"))
-        point = point.field("expires", props.get("expires", ""))
-        point = point.field("active", 1)
-        point = point.time(now, WritePrecision.S)
-        points.append(point)
-
-    summary_point = Point("tempest_nws_alert_summary").tag("station_id", station_id)
-    if station_name:
-        summary_point = summary_point.tag("station_name", station_name)
-    if location_name:
-        summary_point = summary_point.tag("location_name", location_name)
-    summary_point = summary_point.field("alert_count", len(features))
-    summary_point = summary_point.field("max_severity_rank", max_rank)
-    summary_point = summary_point.time(now, WritePrecision.S)
-    points.append(summary_point)
-
-    return points
+    summary_row = {**common, "alert_count": len(features), "max_severity_rank": max_rank}
+    return alert_rows, summary_row
 
 
 def check_tempest_api():
@@ -393,31 +405,36 @@ def check_tempest_api():
     return False, "; ".join(messages) if messages else "no stations configured"
 
 
-def check_influxdb(client):
+def check_clickhouse(client):
     """
-    Verify InfluxDB is reachable and the token can actually write to the bucket.
-    Uses a real test write rather than a bucket-listing lookup, since a properly
-    least-privilege token is scoped to write-only on one bucket and won't have
-    read:buckets permission to list/find bucket metadata.
+    Verify ClickHouse is reachable and the user can actually insert into the
+    database. Uses a real test insert (into poller_healthcheck) rather than a
+    metadata lookup, so it works for a least-privilege INSERT-only user.
     """
     try:
         if not client.ping():
-            return False, "InfluxDB did not respond to ping"
+            return False, "ClickHouse did not respond to ping"
     except Exception as e:
-        return False, f"could not reach InfluxDB: {e}"
+        return False, f"could not reach ClickHouse: {e}"
+
+    if CLICKHOUSE_AUTO_CREATE_SCHEMA:
+        try:
+            chs.ensure_schema(client, "tempest", CLICKHOUSE_DATABASE)
+        except Exception as e:
+            log.warning(
+                "Could not create/verify schema in '%s' (%s) - continuing in case it already exists. "
+                "Set CLICKHOUSE_AUTO_CREATE_SCHEMA=false if this user intentionally lacks CREATE.",
+                CLICKHOUSE_DATABASE, e,
+            )
 
     try:
-        write_api = client.write_api(write_options=SYNCHRONOUS)
-        check_point = (
-            Point("tempest_poller_healthcheck")
-            .tag("check", "startup")
-            .field("value", 1)
-        )
-        write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=check_point)
+        chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.POLLER_HEALTHCHECK, [
+            {"time": int(time.time()), "poller": "tempest", "detail": "startup"},
+        ])
     except Exception as e:
         return False, (
-            f"test write to bucket '{INFLUX_BUCKET}' in org '{INFLUX_ORG}' failed: {e} "
-            "(check token write permission, org name, and bucket name)"
+            f"test insert into '{CLICKHOUSE_DATABASE}.{chs.POLLER_HEALTHCHECK.name}' failed: {e} "
+            "(check the user's INSERT grant, the database name, and that the schema exists)"
         )
 
     return True, "ok"
@@ -426,15 +443,15 @@ def check_influxdb(client):
 def run_startup_checks(client, max_attempts=5, base_delay=5):
     """Run connectivity checks before entering the poll loop, retrying with backoff."""
     for attempt in range(1, max_attempts + 1):
-        influx_ok, influx_msg = check_influxdb(client)
+        ch_ok, ch_msg = check_clickhouse(client)
         tempest_ok, tempest_msg = check_tempest_api()
 
-        if influx_ok and tempest_ok:
-            log.info("Startup checks passed: InfluxDB reachable, Tempest API reachable (%s)", tempest_msg)
+        if ch_ok and tempest_ok:
+            log.info("Startup checks passed: ClickHouse writable, Tempest API reachable (%s)", tempest_msg)
             return True
 
-        if not influx_ok:
-            log.warning("[Attempt %d/%d] InfluxDB check failed: %s", attempt, max_attempts, influx_msg)
+        if not ch_ok:
+            log.warning("[Attempt %d/%d] ClickHouse check failed: %s", attempt, max_attempts, ch_msg)
         if not tempest_ok:
             log.warning("[Attempt %d/%d] Tempest API check failed: %s", attempt, max_attempts, tempest_msg)
 
@@ -446,32 +463,43 @@ def run_startup_checks(client, max_attempts=5, base_delay=5):
     return False
 
 
+def write_batch(client, obs_rows, alert_rows, summary_rows):
+    written = 0
+    written += chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.TEMPEST_OBSERVATIONS, obs_rows)
+    written += chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.TEMPEST_NWS_ALERTS, alert_rows)
+    written += chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.TEMPEST_NWS_ALERT_SUMMARY, summary_rows)
+    return written
+
+
 def main():
     validate_config()
     log.info(
-        "Starting Tempest poller: stations=%s influx=%s bucket=%s interval=%ss units=%s",
-        ",".join(STATION_IDS), INFLUX_URL, INFLUX_BUCKET, POLL_INTERVAL, TEMPEST_UNITS,
+        "Starting Tempest poller: stations=%s clickhouse=%s database=%s interval=%ss units=%s",
+        ",".join(STATION_IDS), chs.describe(CLICKHOUSE), CLICKHOUSE_DATABASE, POLL_INTERVAL, TEMPEST_UNITS,
     )
 
-    client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=INFLUX_ORG)
+    try:
+        client = chs.get_client(CLICKHOUSE)
+    except Exception as e:
+        # get_client() connects immediately; exit so systemd can restart/back off
+        log.error("Could not connect to ClickHouse at %s: %s", chs.describe(CLICKHOUSE), e)
+        sys.exit(1)
 
     if not run_startup_checks(client):
         log.error("Startup checks failed after multiple attempts - exiting so systemd can restart/back off")
         client.close()
         sys.exit(1)
 
-    write_api = client.write_api(write_options=SYNCHRONOUS)
     last_nws_poll = 0.0
 
     while True:
-        all_points = []
+        obs_rows, alert_rows, summary_rows = [], [], []
         do_nws_poll = NWS_ALERTS_ENABLED and (time.time() - last_nws_poll >= NWS_POLL_INTERVAL)
 
         for station_id in STATION_IDS:
             try:
                 data = fetch_observations(station_id)
-                points = build_points(data, fallback_station_id=station_id)
-                all_points.extend(points)
+                obs_rows.extend(build_rows(data, fallback_station_id=station_id))
 
                 if do_nws_poll:
                     resolved_id = str(data.get("station_id", station_id))
@@ -482,8 +510,9 @@ def main():
                             station_name = data.get("station_name", "")
                             location_name = get_location_name(resolved_id)
                             alerts_json = fetch_nws_alerts(lat, lon)
-                            nws_points = build_nws_points(resolved_id, station_name, location_name, alerts_json)
-                            all_points.extend(nws_points)
+                            alerts, summary = build_nws_rows(resolved_id, station_name, location_name, alerts_json)
+                            alert_rows.extend(alerts)
+                            summary_rows.append(summary)
                         except requests.exceptions.RequestException as e:
                             log.warning("NWS alerts fetch failed for station %s: %s", station_id, e)
                         except Exception as e:
@@ -496,12 +525,12 @@ def main():
         if do_nws_poll:
             last_nws_poll = time.time()
 
-        if all_points:
+        if obs_rows or alert_rows or summary_rows:
             try:
-                write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=all_points)
-                log.info("Wrote %d point(s) to InfluxDB across %d station(s)", len(all_points), len(STATION_IDS))
+                written = write_batch(client, obs_rows, alert_rows, summary_rows)
+                log.info("Wrote %d row(s) to ClickHouse across %d station(s)", written, len(STATION_IDS))
             except Exception as e:
-                log.exception("Failed to write points to InfluxDB: %s", e)
+                log.exception("Failed to write rows to ClickHouse: %s", e)
         else:
             log.warning("No observations collected this poll across any station")
 

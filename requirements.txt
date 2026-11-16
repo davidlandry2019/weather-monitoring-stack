@@ -1,2 +1,2 @@
 requests>=2.31.0
-influxdb-client>=1.40.0
+clickhouse-connect>=0.8.0

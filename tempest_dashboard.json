@@ -1,12 +1,19 @@
 {
   "__inputs": [
     {
-      "name": "DS_INFLUXDB",
-      "label": "InfluxDB",
-      "description": "InfluxDB datasource pointing at your Tempest bucket",
+      "name": "DS_CLICKHOUSE",
+      "label": "ClickHouse",
+      "description": "ClickHouse datasource holding the Tempest tables",
       "type": "datasource",
-      "pluginId": "influxdb",
-      "pluginName": "InfluxDB"
+      "pluginId": "grafana-clickhouse-datasource",
+      "pluginName": "ClickHouse"
+    },
+    {
+      "name": "VAR_DATABASE",
+      "label": "ClickHouse database",
+      "description": "Database the Tempest poller writes to (CLICKHOUSE_DATABASE)",
+      "type": "constant",
+      "value": "tempest"
     }
   ],
   "__requires": [
@@ -18,9 +25,9 @@
     },
     {
       "type": "datasource",
-      "id": "influxdb",
-      "name": "InfluxDB",
-      "version": "1.0.0"
+      "id": "grafana-clickhouse-datasource",
+      "name": "ClickHouse",
+      "version": "4.0.0"
     },
     {
       "type": "panel",
@@ -42,15 +49,33 @@
   "templating": {
     "list": [
       {
+        "type": "constant",
+        "name": "database",
+        "label": "ClickHouse database",
+        "hide": 2,
+        "query": "${VAR_DATABASE}",
+        "current": {
+          "text": "${VAR_DATABASE}",
+          "value": "${VAR_DATABASE}"
+        },
+        "options": [
+          {
+            "text": "${VAR_DATABASE}",
+            "value": "${VAR_DATABASE}",
+            "selected": true
+          }
+        ],
+        "skipUrlSync": false
+      },
+      {
         "name": "station_id",
         "label": "Station",
         "type": "query",
         "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "type": "grafana-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
         },
-        "query": "from(bucket: \"tempest\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r._field == \"latitude\")\n  |> group(columns: [\"station_id\"])\n  |> last()\n  |> map(fn: (r) => ({ r with _value: r.station_id + \" - \" + r.station_name + \" \u2014 \" + r.location_name }))\n  |> keep(columns: [\"_value\"])",
-        "regex": "/^(?<value>[^ ]+) - (?<text>.*)$/",
+        "query": "SELECT station_id, concat(argMax(station_name, time), ' \u2014 ', argMax(location_name, time)) FROM ${database}.tempest_observations WHERE time >= now() - INTERVAL 30 DAY GROUP BY station_id ORDER BY station_id",
         "multi": false,
         "includeAll": true,
         "current": {
@@ -58,7 +83,8 @@
           "value": "$__all"
         },
         "refresh": 2,
-        "sort": 1
+        "sort": 1,
+        "definition": "SELECT station_id, concat(argMax(station_name, time), ' \u2014 ', argMax(location_name, time)) FROM ${database}.tempest_observations WHERE time >= now() - INTERVAL 30 DAY GROUP BY station_id ORDER BY station_id"
       }
     ]
   },
@@ -74,8 +100,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -115,8 +141,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r._field == \"air_temperature\")\n  |> last()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, station_name, location_name, v AS air_temperature\nFROM (\n  SELECT max(time) AS last_seen, station_id, station_name, location_name, argMaxIf(air_temperature, time, air_temperature IS NOT NULL) AS v\n  FROM ${database}.tempest_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND air_temperature IS NOT NULL\n  GROUP BY station_id, station_name, location_name\n)\nORDER BY last_seen"
         }
       ],
       "timeFrom": "1h",
@@ -133,8 +167,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -174,8 +208,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r._field == \"wind_gust\")\n  |> last()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, station_name, location_name, v AS wind_gust\nFROM (\n  SELECT max(time) AS last_seen, station_id, station_name, location_name, argMaxIf(wind_gust, time, wind_gust IS NOT NULL) AS v\n  FROM ${database}.tempest_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND wind_gust IS NOT NULL\n  GROUP BY station_id, station_name, location_name\n)\nORDER BY last_seen"
         }
       ],
       "timeFrom": "1h",
@@ -192,8 +234,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -237,8 +279,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r._field == \"air_temperature\")\n  |> last()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, station_name, location_name, v AS air_temperature\nFROM (\n  SELECT max(time) AS last_seen, station_id, station_name, location_name, argMaxIf(air_temperature, time, air_temperature IS NOT NULL) AS v\n  FROM ${database}.tempest_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND air_temperature IS NOT NULL\n  GROUP BY station_id, station_name, location_name\n)\nORDER BY last_seen"
         }
       ],
       "timeFrom": "1h",
@@ -255,8 +305,8 @@
         "y": 10
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {},
@@ -357,8 +407,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"tempest_nws_alerts\")\n  |> filter(fn: (r) => r._field == \"headline\" or r._field == \"urgency\" or r._field == \"expires\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"station_id\", \"event\", \"severity\", \"station_name\", \"location_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> map(fn: (r) => ({ r with city_name: r.station_name + \" (\" + r.location_name + \")\" }))\n  |> keep(columns: [\"city_name\", \"severity\", \"event\", \"urgency\", \"expires\", \"headline\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT concat(station_name, ' (', location_name, ')') AS city_name,\n       severity, event, v_urgency AS urgency, v_expires AS expires, v_headline AS headline\nFROM (\n  SELECT station_id, station_name, location_name, event, severity,\n         argMax(urgency, time) AS v_urgency,\n         argMax(expires, time) AS v_expires,\n         argMax(headline, time) AS v_headline\n  FROM ${database}.tempest_nws_alerts\n  WHERE time >= now() - INTERVAL 30 MINUTE\n  GROUP BY station_id, station_name, location_name, event, severity\n)\nORDER BY city_name, event"
         }
       ],
       "transformations": [
@@ -390,13 +448,21 @@
         "y": 16
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n    |> filter(fn: (r) => r._field == \"latitude\" or r._field == \"longitude\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"station_id\", \"station_name\", \"location_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"_time\", \"station_id\", \"station_name\", \"location_name\", \"latitude\", \"longitude\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen AS time, station_id, v_station_name AS station_name, v_location_name AS location_name,\n       v_lat AS latitude, v_lon AS longitude\nFROM (\n  SELECT station_id,\n         max(time) AS last_seen,\n         argMax(station_name, time) AS v_station_name,\n         argMax(location_name, time) AS v_location_name,\n         argMaxIf(latitude, time, latitude IS NOT NULL) AS v_lat,\n         argMaxIf(longitude, time, longitude IS NOT NULL) AS v_lon\n  FROM ${database}.tempest_observations\n  WHERE time >= now() - INTERVAL 6 HOUR AND latitude IS NOT NULL AND longitude IS NOT NULL\n  GROUP BY station_id\n)"
         }
       ],
       "options": {
@@ -518,13 +584,21 @@
         ]
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "import \"math\"\n\n// Standard NWS Heat Index regression (valid roughly T>=80F) plus a\n// simple illustrative solar-radiation bonus (not a peer-reviewed term)\nheatIndex = (t, rh) => -42.379 + 2.04901523*t + 10.14333127*rh - 0.22475541*t*rh - 0.00683783*t*t - 0.05481717*rh*rh + 0.00122874*t*t*rh + 0.00085282*t*rh*rh - 0.00000199*t*t*rh*rh\n\n// Standard NWS Wind Chill formula (valid roughly T<=50F, wind>=3mph)\nwindChill = (t, v) => 35.74 + 0.6215*t - 35.75*math.pow(x: v, y: 0.16) + 0.4275*t*math.pow(x: v, y: 0.16)\n\nfrom(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"air_temperature\" or r._field == \"dew_point\" or r._field == \"relative_humidity\" or r._field == \"wind_avg\" or r._field == \"solar_radiation\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> pivot(rowKey: [\"_time\", \"station_id\", \"station_name\", \"location_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with feels_like:\n      if r.air_temperature >= 80.0 then heatIndex(t: r.air_temperature, rh: r.relative_humidity) + (r.solar_radiation / 1000.0) * 8.0\n      else if r.air_temperature <= 50.0 and r.wind_avg >= 3.0 then windChill(t: r.air_temperature, v: r.wind_avg)\n      else r.air_temperature\n  }))\n  |> keep(columns: [\"_time\", \"station_name\", \"location_name\", \"air_temperature\", \"dew_point\", \"feels_like\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "-- feels_like: standard NWS heat index (T >= 80F) plus a simple\n-- illustrative solar-radiation bonus (not a peer-reviewed term), or\n-- NWS wind chill (T <= 50F, wind >= 3 mph). Assumes imperial units.\nSELECT t, station_name, location_name,\n       v_air_temperature AS air_temperature,\n       v_dew_point AS dew_point,\n       multiIf(\n         v_air_temperature >= 80, -42.379 + 2.04901523*v_air_temperature + 10.14333127*v_rh - 0.22475541*v_air_temperature*v_rh - 0.00683783*v_air_temperature*v_air_temperature - 0.05481717*v_rh*v_rh + 0.00122874*v_air_temperature*v_air_temperature*v_rh + 0.00085282*v_air_temperature*v_rh*v_rh - 0.00000199*v_air_temperature*v_air_temperature*v_rh*v_rh + (coalesce(v_solar, 0) / 1000.0) * 8.0,\n         v_air_temperature <= 50 AND v_wind >= 3, 35.74 + 0.6215*v_air_temperature - 35.75*pow(v_wind, 0.16) + 0.4275*v_air_temperature*pow(v_wind, 0.16),\n         v_air_temperature) AS feels_like\nFROM (\n  SELECT $__timeInterval(time) AS t, station_id, station_name, location_name,\n         avg(air_temperature) AS v_air_temperature,\n         avg(dew_point) AS v_dew_point,\n         avg(relative_humidity) AS v_rh,\n         avg(wind_avg) AS v_wind,\n         avg(solar_radiation) AS v_solar\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -559,13 +633,21 @@
         "overrides": []
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"relative_humidity\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_relative_humidity AS relative_humidity\nFROM (\n  SELECT $__timeInterval(time) AS t, station_id, station_name, location_name,\n         avg(relative_humidity) AS v_relative_humidity\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -644,13 +726,21 @@
         ]
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"wind_avg\" or r._field == \"wind_gust\" or r._field == \"wind_lull\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_wind_avg AS wind_avg, v_wind_gust AS wind_gust, v_wind_lull AS wind_lull\nFROM (\n  SELECT $__timeInterval(time) AS t, station_id, station_name, location_name,\n         avg(wind_avg) AS v_wind_avg,\n avg(wind_gust) AS v_wind_gust,\n avg(wind_lull) AS v_wind_lull\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -691,13 +781,21 @@
         "overrides": []
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"wind_direction\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_wind_direction AS wind_direction\nFROM (\n  SELECT $__timeInterval(time) AS t, station_id, station_name, location_name,\n         avg(wind_direction) AS v_wind_direction\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -761,13 +859,21 @@
         ]
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"station_pressure\" or r._field == \"sea_level_pressure\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_station_pressure AS station_pressure, v_sea_level_pressure AS sea_level_pressure\nFROM (\n  SELECT $__timeInterval(time) AS t, station_id, station_name, location_name,\n         avg(station_pressure) AS v_station_pressure,\n avg(sea_level_pressure) AS v_sea_level_pressure\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -800,13 +906,21 @@
         "overrides": []
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "import \"timezone\"\n\noption location = timezone.location(name: \"America/Chicago\")\n\nfrom(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"precip\")\n  |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_precip AS precip\nFROM (\n  SELECT toStartOfDay(time, 'America/Chicago') AS t, station_id, station_name, location_name,\n         sum(precip) AS v_precip\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -840,13 +954,21 @@
         "overrides": []
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"uv\")\n  |> aggregateWindow(every: 10m, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_uv AS uv\nFROM (\n  SELECT toStartOfInterval(time, INTERVAL 10 MINUTE) AS t, station_id, station_name, location_name,\n         avg(uv) AS v_uv\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -910,13 +1032,21 @@
         ]
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"solar_radiation\" or r._field == \"brightness\")\n  |> aggregateWindow(every: 10m, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_solar_radiation AS solar_radiation, v_brightness AS brightness\nFROM (\n  SELECT toStartOfInterval(time, INTERVAL 10 MINUTE) AS t, station_id, station_name, location_name,\n         avg(solar_radiation) AS v_solar_radiation,\n avg(brightness) AS v_brightness\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ],
       "options": {
@@ -948,13 +1078,21 @@
         "overrides": []
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"lightning_strike_count\")\n  |> sum()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, station_name, location_name, v AS lightning_strike_count\nFROM (\n  SELECT max(time) AS last_seen, station_id, station_name, location_name, sum(lightning_strike_count) AS v\n  FROM ${database}.tempest_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND station_id IN (${station_id:singlequote})\n  GROUP BY station_id, station_name, location_name\n)\nORDER BY last_seen"
         }
       ]
     },
@@ -969,8 +1107,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1018,8 +1156,16 @@
       },
       "targets": [
         {
-          "query": "import \"math\"\n\nheatIndex = (t, rh) => -42.379 + 2.04901523*t + 10.14333127*rh - 0.22475541*t*rh - 0.00683783*t*t - 0.05481717*rh*rh + 0.00122874*t*t*rh + 0.00085282*t*rh*rh - 0.00000199*t*t*rh*rh\nwindChill = (t, v) => 35.74 + 0.6215*t - 35.75*math.pow(x: v, y: 0.16) + 0.4275*t*math.pow(x: v, y: 0.16)\n\nfrom(bucket: \"tempest\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r._field == \"air_temperature\" or r._field == \"relative_humidity\" or r._field == \"wind_avg\" or r._field == \"solar_radiation\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"station_id\", \"station_name\", \"location_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with feels_like:\n      if r.air_temperature >= 80.0 then heatIndex(t: r.air_temperature, rh: r.relative_humidity) + (r.solar_radiation / 1000.0) * 8.0\n      else if r.air_temperature <= 50.0 and r.wind_avg >= 3.0 then windChill(t: r.air_temperature, v: r.wind_avg)\n      else r.air_temperature\n  }))\n  |> keep(columns: [\"station_name\", \"location_name\", \"feels_like\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, station_name, location_name,\n       multiIf(\n         v_air >= 80, -42.379 + 2.04901523*v_air + 10.14333127*v_rh - 0.22475541*v_air*v_rh - 0.00683783*v_air*v_air - 0.05481717*v_rh*v_rh + 0.00122874*v_air*v_air*v_rh + 0.00085282*v_air*v_rh*v_rh - 0.00000199*v_air*v_air*v_rh*v_rh + (coalesce(v_solar, 0) / 1000.0) * 8.0,\n         v_air <= 50 AND v_wind >= 3, 35.74 + 0.6215*v_air - 35.75*pow(v_wind, 0.16) + 0.4275*v_air*pow(v_wind, 0.16),\n         v_air) AS feels_like\nFROM (\n  SELECT max(time) AS last_seen, station_id, station_name, location_name,\n         argMaxIf(air_temperature, time, air_temperature IS NOT NULL) AS v_air,\n         argMaxIf(relative_humidity, time, relative_humidity IS NOT NULL) AS v_rh,\n         argMaxIf(wind_avg, time, wind_avg IS NOT NULL) AS v_wind,\n         argMaxIf(solar_radiation, time, solar_radiation IS NOT NULL) AS v_solar\n  FROM ${database}.tempest_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR\n  GROUP BY station_id, station_name, location_name\n  HAVING v_air IS NOT NULL\n)\nORDER BY last_seen"
         }
       ],
       "timeFrom": "1h",
@@ -1036,8 +1182,8 @@
         "y": 4
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1193,8 +1339,16 @@
       "options": {},
       "targets": [
         {
-          "query": "import \"array\"\n\nreal = from(bucket: \"tempest\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"tempest_nws_alerts\")\n  |> filter(fn: (r) => r._field == \"active\")\n  |> group(columns: [\"station_name\", \"location_name\", \"severity\", \"event\"])\n  |> last()\n  |> group(columns: [\"station_name\", \"location_name\", \"severity\"])\n  |> count()\n  |> group()\n  |> map(fn: (r) => ({ location: r.station_name + \" (\" + r.location_name + \")\", severity: r.severity, _value: r._value }))\n\nscaffold = array.from(rows: [\n  {location: \"__scaffold__\", severity: \"Minor\", _value: 0},\n  {location: \"__scaffold__\", severity: \"Moderate\", _value: 0},\n  {location: \"__scaffold__\", severity: \"Severe\", _value: 0},\n  {location: \"__scaffold__\", severity: \"Extreme\", _value: 0},\n])\n\nunion(tables: [real, scaffold])\n  |> pivot(rowKey: [\"location\"], columnKey: [\"severity\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.location != \"__scaffold__\")\n  |> group()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "-- Distinct active alert events per station, split by severity\nSELECT concat(station_name, ' (', location_name, ')') AS location,\n       uniqExactIf(event, severity = 'Minor') AS Minor,\n       uniqExactIf(event, severity = 'Moderate') AS Moderate,\n       uniqExactIf(event, severity = 'Severe') AS Severe,\n       uniqExactIf(event, severity = 'Extreme') AS Extreme\nFROM ${database}.tempest_nws_alerts\nWHERE time >= now() - INTERVAL 30 MINUTE\nGROUP BY station_id, station_name, location_name\nORDER BY location"
         }
       ],
       "transformations": [
@@ -1225,8 +1379,8 @@
         "y": 49
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1253,8 +1407,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"lightning_strike_count\")\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, station_name, location_name, v_lightning_strike_count AS lightning_strike_count\nFROM (\n  SELECT $__timeInterval(time) AS t, station_id, station_name, location_name,\n         sum(lightning_strike_count) AS v_lightning_strike_count\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n  GROUP BY t, station_id, station_name, location_name\n)\nORDER BY t"
         }
       ]
     },
@@ -1269,12 +1431,13 @@
         "y": 65
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "strikes"
+          "unit": "strikes",
+          "displayName": "${__field.labels.distance_bucket}"
         },
         "overrides": []
       },
@@ -1300,8 +1463,16 @@
       },
       "targets": [
         {
-          "query": "import \"math\"\n\nfrom(bucket: \"tempest\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"tempest_observations\")\n  |> filter(fn: (r) => r.station_id =~ /^${station_id:regex}$/)\n  |> filter(fn: (r) => r._field == \"lightning_strike_last_distance\" or r._field == \"lightning_strike_count\")\n  |> pivot(rowKey: [\"_time\", \"station_id\", \"station_name\", \"location_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.lightning_strike_count > 0.0)\n  |> map(fn: (r) => ({ r with distance_bucket: string(v: math.floor(x: r.lightning_strike_last_distance / 2.0) * 2.0) }))\n  |> group(columns: [\"distance_bucket\"])\n  |> window(every: 5m)\n  |> sum(column: \"lightning_strike_count\")\n  |> duplicate(column: \"_start\", as: \"_time\")\n  |> group()\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"distance_bucket\"], valueColumn: \"lightning_strike_count\")",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "-- One series per 2-mile distance bucket (label distance_bucket),\n-- strikes summed per 5 minutes\nSELECT t, distance_bucket, v AS lightning_strike_count\nFROM (\n  SELECT toStartOfInterval(time, INTERVAL 5 MINUTE) AS t,\n         toString(floor(lightning_strike_last_distance / 2) * 2) AS distance_bucket,\n         sum(lightning_strike_count) AS v\n  FROM ${database}.tempest_observations FINAL\n  WHERE $__timeFilter(time) AND station_id IN (${station_id:singlequote})\n    AND lightning_strike_count > 0 AND lightning_strike_last_distance IS NOT NULL\n  GROUP BY t, distance_bucket\n)\nORDER BY t"
         }
       ],
       "description": "Each cell represents a 5-minute time window and a 2-mile distance band. Color brightness shows the total number of lightning strikes detected in that window at that distance - brighter means more strikes, not just that a reading occurred."
