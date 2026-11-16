@@ -12,7 +12,7 @@
 
 **Poller host**
 - Linux (any modern distro with systemd - Ubuntu, Debian, etc.); this guide's commands assume Debian/Ubuntu-based
-- Python 3.8+
+- Python 3.9+ (the installer installs it if needed)
 - ~50 MB disk for the poller itself; negligible CPU/RAM (a single-station poll cycle is lightweight)
 - Outbound HTTPS access to:
   - `swd.weatherflow.com` (Tempest API)
@@ -117,19 +117,24 @@ files and enter that name when importing each dashboard.
 
 > **Viewing someone else's station**: your Personal Use Token only grants access to stations you own. To poll a station owned by someone else, that station's owner must first share it with your Tempest account (from their station's settings on tempestwx.com, under station sharing/permissions) before its Station ID will work with your token.
 
-## 4. Deploy the poller
+## 4. Install the pollers
+
+On the poller host (Debian/Ubuntu with systemd):
 
 ```bash
-sudo useradd -r -s /usr/sbin/nologin tempest
-sudo mkdir -p /opt/scripts/tempest-poller
-sudo cp tempest_poller.py clickhouse_schema.py requirements.txt /opt/scripts/tempest-poller/
-cd /opt/scripts/tempest-poller
-sudo python3 -m venv venv
-sudo ./venv/bin/pip install -r requirements.txt
+sudo git clone https://github.com/davidlandry2019/weather-monitoring-stack.git /opt/weather-monitoring-stack
+sudo bash /opt/weather-monitoring-stack/deploy/install.sh
+```
 
-sudo cp tempest-poller.env.example /opt/scripts/tempest-poller/tempest-poller.env
-sudo chmod 600 /opt/scripts/tempest-poller/tempest-poller.env
-sudo nano /opt/scripts/tempest-poller/tempest-poller.env
+The installer sets up Python, the `.venv` and the `weather-poller` service user,
+and runs the tests. It then creates `tempest-poller.env` and `owm-poller.env` in
+`/opt/weather-monitoring-stack` (owned `root:weather-poller`, mode 640). It asks
+for each poller's ClickHouse password if it's run in a terminal. A poller only
+starts once its env file is filled in, so the first run usually ends with
+"waiting for configuration". Edit the file:
+
+```bash
+sudo nano /opt/weather-monitoring-stack/tempest-poller.env
 ```
 
 Fill in:
@@ -139,27 +144,21 @@ Fill in:
 - `CLICKHOUSE_AUTO_CREATE_SCHEMA=false` if you created the schema in step 2 and only granted INSERT
 - `NWS_USER_AGENT` - identify your app/contact per NWS's API policy
 
-```bash
-sudo chown -R tempest:tempest /opt/scripts/tempest-poller
-```
-
-Test it in the foreground first:
+Then run the installer again. It installs and starts `tempest-poller.service`
+and waits for the poller to log `Startup checks passed`:
 
 ```bash
-cd /opt/scripts/tempest-poller
-sudo -u tempest bash -c 'set -a; source tempest-poller.env; set +a; ./venv/bin/python3 tempest_poller.py'
+sudo bash /opt/weather-monitoring-stack/deploy/install.sh
+journalctl -u tempest-poller -f        # expect "Wrote N row(s) to ClickHouse" every minute
 ```
 
-You should see `Startup checks passed: ClickHouse writable, Tempest API reachable`
-followed by a `Wrote N row(s) to ClickHouse` line. Ctrl+C, then install the service:
+You can also pass the ClickHouse settings to the installer instead of editing
+the file: `sudo CLICKHOUSE_HOST=clickhouse.lan TEMPEST_CLICKHOUSE_PASSWORD='...' bash .../install.sh`.
+Only install one poller with `POLLERS=tempest` (or `POLLERS=owm`).
 
-```bash
-sudo cp tempest-poller.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now tempest-poller
-sudo systemctl status tempest-poller
-journalctl -u tempest-poller -f
-```
+**Updating:** run the same `install.sh` command. It pulls the latest code first,
+runs the tests, and only restarts the pollers if they pass. Your env files are
+never overwritten.
 
 Check data is landing:
 

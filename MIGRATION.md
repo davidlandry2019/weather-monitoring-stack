@@ -42,12 +42,29 @@ can also merge both buckets into one shared database.
 
 1. **Install ClickHouse and create the schema and users.** Follow steps 1–2 of
    [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) and step 2 of [`SETUP-OWM.md`](SETUP-OWM.md).
-2. **Cut the pollers over.** Update the poller files, `pip install -r requirements.txt`,
-   replace the `INFLUX_*` lines in each env file with the `CLICKHOUSE_*` ones from the
-   `.env.example` files, copy the updated `.service` files, then
-   `systemctl daemon-reload && systemctl restart tempest-poller owm-poller`.
+2. **Cut the pollers over** with the installer, on the poller host:
+   ```bash
+   sudo git clone https://github.com/davidlandry2019/weather-monitoring-stack.git /opt/weather-monitoring-stack
+   sudo bash /opt/weather-monitoring-stack/deploy/install.sh
+   ```
+   The first run creates `/opt/weather-monitoring-stack/tempest-poller.env` and
+   `owm-poller.env`. It copies your settings (tokens, station IDs, locations,
+   overrides) from the old `/opt/scripts/<poller>/<poller>.env` files and drops
+   the `INFLUX_*` lines. Until a poller's ClickHouse password is filled in, its old
+   InfluxDB service keeps running untouched. Fill in `CLICKHOUSE_HOST` and
+   `CLICKHOUSE_PASSWORD`, or pass them in, then run it again:
+   ```bash
+   sudo CLICKHOUSE_HOST=<clickhouse-host> TEMPEST_CLICKHOUSE_PASSWORD='...' OWM_CLICKHOUSE_PASSWORD='...' \
+     bash /opt/weather-monitoring-stack/deploy/install.sh
+   ```
+   The installer replaces each `.service` unit with the new one, runs as the new
+   `weather-poller` user, and waits for `Startup checks passed`. If a poller fails
+   its checks, it puts the old unit back and restarts it, so InfluxDB keeps
+   receiving data while you fix the env file. The old unit is kept as
+   `/etc/systemd/system/<poller>.service.pre-v2`.
    New data now flows into ClickHouse. InfluxDB stops growing but keeps everything
-   it already has.
+   it already has. Once you're happy, remove `/opt/scripts/tempest-poller`,
+   `/opt/scripts/owm-poller`, the `.pre-v2` units and the old `tempest`/`owm-poller` users.
 3. **Run the migration** (below). Running it while the new pollers are writing
    is safe. An observation that is both migrated and written live ends up as a
    single row.

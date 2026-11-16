@@ -43,20 +43,20 @@ To let the poller create its own tables instead, also
 `GRANT CREATE DATABASE, CREATE TABLE ON weathermap.* TO owm_poller;` and keep
 `CLICKHOUSE_AUTO_CREATE_SCHEMA=true`.
 
-## 3. Deploy the poller
+## 3. Configure the poller
+
+The installer from step 4 of [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) installs
+both pollers. If you haven't run it yet:
 
 ```bash
-sudo useradd -r -s /usr/sbin/nologin owm-poller
-sudo mkdir -p /opt/scripts/owm-poller
-sudo cp owm_poller.py clickhouse_schema.py requirements.txt /opt/scripts/owm-poller/
+sudo git clone https://github.com/davidlandry2019/weather-monitoring-stack.git /opt/weather-monitoring-stack
+sudo bash /opt/weather-monitoring-stack/deploy/install.sh     # POLLERS=owm for this poller only
+```
 
-cd /opt/scripts/owm-poller
-sudo python3 -m venv venv
-sudo ./venv/bin/pip install -r requirements.txt
+Then edit the env file it created:
 
-sudo cp owm-poller.env.example /opt/scripts/owm-poller/owm-poller.env
-sudo chmod 600 /opt/scripts/owm-poller/owm-poller.env
-sudo nano /opt/scripts/owm-poller/owm-poller.env
+```bash
+sudo nano /opt/weather-monitoring-stack/owm-poller.env
 ```
 
 Fill in:
@@ -68,31 +68,19 @@ Fill in:
 - `CLICKHOUSE_AUTO_CREATE_SCHEMA=false` if the user only has INSERT
 - `NWS_USER_AGENT` - identify your app/contact per NWS's API policy
 
-```bash
-sudo chown -R owm-poller:owm-poller /opt/scripts/owm-poller
-```
+## 4. Start it
 
-## 4. Test manually first
-
-```bash
-cd /opt/scripts/owm-poller
-sudo -u owm-poller bash -c 'set -a; source owm-poller.env; set +a; ./venv/bin/python3 owm_poller.py'
-```
-
-You should see the startup checks pass, then a `Wrote N row(s) to ClickHouse`
-confirmation. Ctrl+C once confirmed.
-
-## 5. Install as a systemd service
+Run the installer again. It installs and starts `owm-poller.service` and waits
+for the poller to log `Startup checks passed`:
 
 ```bash
-sudo cp owm-poller.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now owm-poller
-sudo systemctl status owm-poller
-journalctl -u owm-poller -f
+sudo bash /opt/weather-monitoring-stack/deploy/install.sh
+journalctl -u owm-poller -f        # expect "Wrote N row(s) to ClickHouse" every poll
 ```
 
-## 6. Grafana
+Updates use the same command. See "Updating" in `SETUP-TEMPEST.md`.
+
+## 5. Grafana
 
 Reuse the ClickHouse data source from the Tempest setup (the `weather_reader`
 user can read both databases), or add one as described in step 5 of

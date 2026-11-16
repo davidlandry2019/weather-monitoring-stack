@@ -1,0 +1,27 @@
+# Installed by deploy/install.sh, which fills in APP_DIR and the service user.
+[Unit]
+Description=Tempest Weather Station Poller (weather-monitoring-stack)
+After=network-online.target clickhouse-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=weather-poller
+Group=weather-poller
+WorkingDirectory=/opt/weather-monitoring-stack
+EnvironmentFile=/opt/weather-monitoring-stack/tempest-poller.env
+ExecStart=/opt/weather-monitoring-stack/.venv/bin/python /opt/weather-monitoring-stack/tempest_poller.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Basic hardening: the poller writes nothing to disk
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
