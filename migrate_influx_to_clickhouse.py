@@ -44,9 +44,13 @@ How it maps data
     row, later non-empty values winning. These are counted as "merged".
   * Timestamps are truncated to whole seconds (the pollers only ever wrote
     second precision).
-  * Values are copied exactly as stored - no unit conversion. If your
-    Tempest history predates poller v1.7 (when imperial conversion was
-    added), those older rows are metric in InfluxDB and stay metric here.
+  * Values are copied exactly as stored, with one opt-in exception: Tempest
+    poller < v1.7 stored raw metric values. `inspect` finds where the
+    metric -> imperial switch happened (station_pressure in hPa vs inHg),
+    and `--tempest-metric-before WHEN` converts older tempest_observations
+    rows with the poller's own formulas. Every row's pressure is checked
+    against the cutoff, so a wrong cutoff stops the run instead of
+    double-converting or leaving metric rows behind.
   * The *_poller_healthcheck measurements are not migrated.
 
 Running it alongside the new pollers is safe: the destination tables are
@@ -204,6 +208,71 @@ def merge_rows(table, rows, stats):
     return merged
 
 
+# Tempest poller < v1.7 stored raw metric values. Pressure tells the two eras
+# apart unambiguously: hPa readings are ~500-1100, inHg readings ~15-32.
+PRESSURE_FIELDS = ("station_pressure", "barometric_pressure", "sea_level_pressure")
+METRIC_PRESSURE_THRESHOLD = 100.0
+
+
+class UnitConversionError(Exception):
+    pass
+
+
+def pressure_looks_metric(row):
+    """True (hPa), False (inHg), or None when the row has no pressure reading."""
+    for f in PRESSURE_FIELDS:
+        v = row.get(f)
+        if v is not None:
+            return v > METRIC_PRESSURE_THRESHOLD
+    return None
+
+
+class TempestUnits:
+    """
+    Per-row unit handling for tempest_observations.
+
+    With `metric_before` (epoch seconds) set, rows older than it are converted
+    from metric to imperial using the poller's own converters, and the cutoff
+    is sanity-checked against each row's pressure reading: a pre-cutoff row
+    that's already imperial (cutoff too late - would be double-converted) or a
+    post-cutoff row that's still metric (cutoff too early - would stay metric)
+    raises UnitConversionError.
+
+    Without it, rows are left alone and metric-looking ones are only counted,
+    so the summary can point at the option.
+    """
+
+    def __init__(self, metric_before=None):
+        from tempest_poller import FIELD_UNIT_CONVERTERS  # single source of truth for the formulas
+
+        self.converters = FIELD_UNIT_CONVERTERS
+        self.metric_before = metric_before
+        self.converted = 0
+        self.metric_looking = 0
+
+    def apply(self, row):
+        metric = pressure_looks_metric(row)
+        where = f"station {row.get('station_id')!r} at {rfc3339(row['time'])}"
+        if self.metric_before is None:
+            if metric:
+                self.metric_looking += 1
+            return row
+        if row["time"] < self.metric_before:
+            if metric is False:
+                raise UnitConversionError(
+                    f"{where} is before the --tempest-metric-before cutoff but its pressure is already "
+                    "imperial (inHg) - the cutoff is too late and this row would be converted twice")
+            for field, convert in self.converters.items():
+                if row.get(field) is not None:
+                    row[field] = convert(row[field])
+            self.converted += 1
+        elif metric:
+            raise UnitConversionError(
+                f"{where} is after the --tempest-metric-before cutoff but its pressure is still metric "
+                "(hPa) - the cutoff is too early and this row would stay metric")
+        return row
+
+
 def values_equal(a, b):
     if isinstance(a, float) or isinstance(b, float):
         if a is None or b is None:
@@ -283,13 +352,19 @@ class InfluxSource:
         keys = {r.get_value() for t in self._query(flux) for r in t.records}
         return sorted(k for k in keys if k not in INFLUX_META_COLUMNS)
 
-    def time_bound(self, measurement, which):
-        """Earliest ('first') or latest ('last') point time for a measurement, or None."""
+    def time_bound(self, measurement, which, where=None):
+        """
+        Earliest ('first') or latest ('last') point time for a measurement, or
+        None. `where` is an extra Flux predicate on r, e.g.
+        'r._field == "station_pressure" and r._value > 100.0'.
+        """
         desc = "true" if which == "last" else "false"
+        extra = f"  |> filter(fn: (r) => {where})\n" if where else ""
         flux = (
             f"from(bucket: {flux_string(self.bucket)})\n"
             f"  |> range(start: {EPOCH0})\n"
             f"  |> filter(fn: (r) => r._measurement == {flux_string(measurement)})\n"
+            f"{extra}"
             f"  |> {which}()\n"
             '  |> keep(columns: ["_time"])\n'
             "  |> group()\n"
@@ -313,11 +388,12 @@ class InfluxSource:
             yield record.values
 
 
-def read_chunk(source, table, start, stop, stats):
+def read_chunk(source, table, start, stop, stats, units=None):
     rows = []
     for values in source.pivoted_records(table.influx_measurement, start, stop):
         stats.records += 1
-        rows.append(record_to_row(table, values, stats))
+        row = record_to_row(table, values, stats)
+        rows.append(units.apply(row) if units else row)
     return merge_rows(table, rows, stats)
 
 
@@ -399,6 +475,37 @@ def resolve_range(source, table, args):
     return start, stop
 
 
+def units_report(source):
+    """
+    Find where tempest_observations switched from metric (poller < v1.7) to
+    imperial, using station_pressure (hPa > 100 > inHg). Returns
+    (lines, suggested_cutoff_or_None).
+    """
+    m = TEMPEST_OBSERVATIONS_MEASUREMENT
+    metric = f'r._field == "station_pressure" and r._value > {METRIC_PRESSURE_THRESHOLD}'
+    imperial = f'r._field == "station_pressure" and r._value < {METRIC_PRESSURE_THRESHOLD}'
+    first_metric = source.time_bound(m, "first", metric)
+    last_metric = source.time_bound(m, "last", metric)
+    first_imperial = source.time_bound(m, "first", imperial)
+
+    if last_metric is None:
+        return ["units: all pressure readings are imperial - no conversion needed"], None
+    if first_imperial is None:
+        return [f"units: ALL readings look metric ({rfc3339(first_metric)} .. {rfc3339(last_metric)}) - "
+                "the poller ran with TEMPEST_UNITS=metric or predates v1.7 throughout"], None
+    lines = [f"units: metric (hPa) readings {rfc3339(first_metric)} .. {rfc3339(last_metric)}, "
+             f"imperial (inHg) from {rfc3339(first_imperial)}"]
+    if last_metric < first_imperial:
+        lines.append(f"       -> migrate with  --tempest-metric-before {rfc3339(first_imperial)}")
+        return lines, first_imperial
+    lines.append("       -> metric and imperial readings OVERLAP (e.g. stations upgraded at different times, "
+                 "or units toggled back and forth) - a single cutoff can't separate them")
+    return lines, None
+
+
+TEMPEST_OBSERVATIONS_MEASUREMENT = chs.TEMPEST_OBSERVATIONS.influx_measurement
+
+
 def cmd_inspect(args, source):
     tables = {t.influx_measurement: t for t in migratable_tables(args.pipeline)}
     present = source.measurements()
@@ -414,6 +521,9 @@ def cmd_inspect(args, source):
         last = source.time_bound(m, "last")
         span = f"{rfc3339(first)} .. {rfc3339(last)}" if first is not None else "empty"
         print(f"- {m} -> {args.database}.{table.name}   [{span}]")
+        if table is chs.TEMPEST_OBSERVATIONS and first is not None:
+            for line in units_report(source)[0]:
+                print(f"      {line}")
         types = dict(table.columns)
         for kind in ("tag", "field"):
             for k in source.keys(m, kind):
@@ -435,6 +545,7 @@ def run_chunks(args, source, client, write):
     # --restart ignores saved progress but still records new progress
     state = State(args.state_file, load=not args.restart, save=write and not args.dry_run)
     chunk_seconds = int(args.chunk_hours * 3600)
+    metric_before = getattr(args, "tempest_metric_before", None)
     failures = 0
     summary = []
 
@@ -445,7 +556,11 @@ def run_chunks(args, source, client, write):
             log.info("%s: no data in bucket '%s' - skipping", m, source.bucket)
             continue
 
+        units = TempestUnits(metric_before) if table is chs.TEMPEST_OBSERVATIONS else None
         skey = State.key(source.bucket, m, args.database, table.name)
+        if units and metric_before is not None:
+            # A different cutoff means different stored values - track progress separately
+            skey += f" [metric before {rfc3339(metric_before)}]"
         resume_from = state.done_until(skey) if state.enabled else None
         if resume_from and resume_from > start:
             log.info("%s: resuming from %s (state file %s)", m, rfc3339(resume_from), args.state_file)
@@ -462,7 +577,13 @@ def run_chunks(args, source, client, write):
 
         for c_start, c_stop in iter_chunks(start, stop, chunk_seconds):
             chunk_stats = MappingStats()
-            rows = read_chunk(source, table, c_start, c_stop, chunk_stats)
+            try:
+                rows = read_chunk(source, table, c_start, c_stop, chunk_stats, units)
+            except UnitConversionError as e:
+                log.error("%s: %s", m, e)
+                log.error("Run `inspect` to find the right --tempest-metric-before value, then re-run with "
+                          "--restart (rows already copied are overwritten, not duplicated).")
+                return 1, summary
             stats.add(chunk_stats)
             totals["rows"] += len(rows)
 
@@ -495,6 +616,10 @@ def run_chunks(args, source, client, write):
             log.warning("%s: values with no destination column were dropped: %s", m, dict(stats.dropped))
         if stats.to_extra:
             log.info("%s: fields stored in the `extra` map: %s", m, dict(stats.to_extra))
+        if units and units.metric_looking:
+            log.warning("%s: %d row(s) look METRIC (pressure in hPa) and were copied unconverted - "
+                        "probably from poller < v1.7. Run `inspect` and consider --tempest-metric-before.",
+                        m, units.metric_looking)
         line = (f"{m}: {stats.records} influx rows -> {totals['rows']} clickhouse rows "
                 f"({stats.merged} merged)")
         if write and not args.dry_run:
@@ -502,6 +627,10 @@ def run_chunks(args, source, client, write):
         if totals["checked"]:
             line += (f", verified {totals['checked']}: {totals['missing']} missing, "
                      f"{totals['mismatched']} mismatched, {totals['extra_in_clickhouse']} only in ClickHouse")
+        if units and units.converted:
+            line += f", {units.converted} converted metric->imperial"
+        if units and units.metric_looking:
+            line += f", {units.metric_looking} look metric (unconverted)"
         line += f" [{time.time() - t0:.0f}s]"
         summary.append(line)
         log.info(line)
@@ -535,6 +664,10 @@ def build_parser():
         sp.add_argument("--start", help="UTC start: YYYY-MM-DD, RFC3339 or epoch (default: earliest point)")
         sp.add_argument("--stop", help="UTC stop, exclusive (default: now)")
         sp.add_argument("--chunk-hours", type=float, default=24.0, help="window size per read/insert (default 24)")
+        sp.add_argument(
+            "--tempest-metric-before", metavar="WHEN",
+            help="convert tempest_observations rows older than this from metric to imperial (history "
+                 "from Tempest poller < v1.7). `inspect` suggests the value. Pass the same value to verify.")
         if name == "migrate":
             sp.add_argument("--dry-run", action="store_true", help="read and map only; don't touch ClickHouse")
             sp.add_argument("--no-verify", dest="verify", action="store_false", help="skip the per-chunk comparison")
@@ -557,6 +690,11 @@ def main(argv=None):
     args.database = chs.validate_ident(
         args.database or os.environ.get("CLICKHOUSE_DATABASE") or pipe["default_database"]
     )
+    if getattr(args, "tempest_metric_before", None):
+        if args.pipeline != "tempest":
+            log.error("--tempest-metric-before only applies to --pipeline tempest")
+            return 2
+        args.tempest_metric_before = parse_time(args.tempest_metric_before)
     if args.command == "verify":
         args.dry_run, args.verify, args.restart, args.state_file = False, True, False, None
     elif args.command == "migrate" and not args.state_file:

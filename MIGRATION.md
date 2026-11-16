@@ -33,9 +33,10 @@ can also merge both buckets into one shared database.
   was a tag, and before OWM poller v1.4, `weather_main`/`weather_description` were too.
   Both old and new forms land in the same column. Influx series that the bug split apart are
   merged back into one row per station (or location) per second.
-- **Values are copied as stored, with no unit conversion.** If your Tempest
-  bucket has data from before poller v1.7 (when imperial conversion was added),
-  those older points are metric and stay metric.
+- **Values are copied as stored, except for old metric Tempest data, which you
+  can opt to convert.** Tempest pollers before v1.7 stored raw metric values (°C, m/s, hPa, mm, km).
+  The dashboards assume imperial, so that history would display wrongly. See
+  [Converting pre-v1.7 metric history](#converting-pre-v17-metric-history).
 
 ## Recommended order
 
@@ -119,6 +120,39 @@ tempest_observations: 525600 influx rows -> 525600 clickhouse rows (0 merged), 5
 
 - **merged**: Influx rows that shared a ClickHouse identity (see "Old schema quirks") and were combined.
 - **only in ClickHouse**: rows the new pollers wrote that InfluxDB never had. This is expected for the period after step 2.
+
+### Converting pre-v1.7 metric history
+
+`inspect --pipeline tempest` checks `station_pressure` to see which readings
+are metric: hPa values are around 1000, inHg values around 30, so the two never
+overlap. It then reports, for example:
+
+```
+units: metric (hPa) readings 2024-03-02T00:01:00Z .. 2025-01-14T17:42:00Z, imperial (inHg) from 2025-01-14T17:43:00Z
+       -> migrate with  --tempest-metric-before 2025-01-14T17:43:00Z
+```
+
+Pass that value to `migrate`, and the same value to `verify`, so the check
+compares against the converted numbers:
+
+```bash
+./venv/bin/python3 migrate_influx_to_clickhouse.py migrate --pipeline tempest --tempest-metric-before 2025-01-14T17:43:00Z
+```
+
+Rows older than the cutoff are converted to °F/mph/inHg/in/mi using the poller's
+own formulas. Every row is checked against the cutoff, and the run stops on a
+mismatch:
+- A row before the cutoff whose pressure is already imperial means the cutoff is
+  too late. Without the stop, that row would be converted twice.
+- A row after the cutoff whose pressure is still metric means the cutoff is too early.
+
+If `inspect` reports that metric and imperial readings **overlap**, no single
+cutoff can work. That happens with stations upgraded at different times, or with
+units switched back and forth. Migrate with `--measurements` and `--start`/`--stop`
+in separate ranges instead, or ask for per-station cutoffs.
+
+Without the flag, metric rows are still copied, unconverted, and the summary
+warns how many there were.
 
 ### 4. Verify any time
 
