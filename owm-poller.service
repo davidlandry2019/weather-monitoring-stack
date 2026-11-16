@@ -1,6 +1,6 @@
 [Unit]
 Description=OpenWeatherMap Poller
-After=network-online.target influxdb.service
+After=network-online.target clickhouse-server.service
 Wants=network-online.target
 
 [Service]

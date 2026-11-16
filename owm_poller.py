@@ -2,7 +2,7 @@
 """
 OpenWeatherMap Poller
 Polls the OpenWeatherMap free-tier Current Weather Data API for one or more
-named locations and writes observations to InfluxDB 2.x.
+named locations and writes observations to ClickHouse.
 
 Configuration is via environment variables (see owm-poller.env.example):
   OWM_API_KEY      - Your OpenWeatherMap API key
@@ -13,12 +13,19 @@ Configuration is via environment variables (see owm-poller.env.example):
                      note: OWM always returns pressure in hPa and visibility
                      in meters regardless of this setting; those are
                      converted to inHg/miles here when OWM_UNITS=imperial.
-  INFLUX_URL       - e.g. http://localhost:8086
-  INFLUX_TOKEN     - InfluxDB API token with write access
-  INFLUX_ORG       - InfluxDB organization name
-  INFLUX_BUCKET    - InfluxDB bucket name (default: weathermap - kept separate
-                     from the Tempest bucket since this is unrelated,
-                     arbitrary-location data rather than your own station)
+  CLICKHOUSE_HOST  - default localhost
+  CLICKHOUSE_PORT  - HTTP interface port, default 8123 (8443 with CLICKHOUSE_SECURE)
+  CLICKHOUSE_USER  - ClickHouse user with INSERT on the database (default "default")
+  CLICKHOUSE_PASSWORD - that user's password
+  CLICKHOUSE_SECURE - "true" to connect over HTTPS (default false)
+  CLICKHOUSE_DATABASE - database name (default: weathermap - kept separate
+                     from the Tempest database since this is unrelated,
+                     arbitrary-location data rather than your own station;
+                     table names don't collide, so sharing one is also fine)
+  CLICKHOUSE_AUTO_CREATE_SCHEMA - "true" (default) runs CREATE ... IF NOT
+                     EXISTS for the database/tables at startup; set "false"
+                     for an INSERT-only user and create the schema yourself
+                     with clickhouse_schema.py
   POLL_INTERVAL    - Seconds between polls (default 300 - OWM's underlying
                      station/model data typically doesn't refresh faster
                      than every 10min-1hr regardless of poll frequency)
@@ -28,6 +35,15 @@ Configuration is via environment variables (see owm-poller.env.example):
   NWS_USER_AGENT   - Required by NWS API policy - identify your app/contact
 
 Release notes:
+  v2.0 - Storage moved from InfluxDB 2.x to ClickHouse (InfluxData has put
+         Flux, which the dashboards were written in, into maintenance mode,
+         and InfluxDB 3 doesn't run it at all). Rows go to the
+         owm_observations / owm_nws_alerts / owm_nws_alert_summary tables
+         defined in clickhouse_schema.py - one wide row per observation,
+         same field names and units as before. The startup write check now
+         inserts into poller_healthcheck. INFLUX_* variables are replaced by
+         CLICKHOUSE_*. Historical data can be copied over with
+         migrate_influx_to_clickhouse.py.
   v1.4 - Fixed weather_main and weather_description being stored as tags
          instead of fields. Since they change with actual weather conditions,
          tagging them fragmented series identity - every time conditions
@@ -57,11 +73,10 @@ import os
 import sys
 import time
 import logging
-from datetime import datetime
 
 import requests
-from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
+
+import clickhouse_schema as chs
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,10 +92,9 @@ OWM_LOCATIONS = [loc.strip() for loc in _locations_raw.split(";") if loc.strip()
 
 OWM_UNITS = os.environ.get("OWM_UNITS", "imperial").strip().lower()
 
-INFLUX_URL = os.environ.get("INFLUX_URL", "http://localhost:8086")
-INFLUX_TOKEN = os.environ.get("INFLUX_TOKEN")
-INFLUX_ORG = os.environ.get("INFLUX_ORG")
-INFLUX_BUCKET = os.environ.get("INFLUX_BUCKET", "weathermap")
+CLICKHOUSE = chs.clickhouse_settings_from_env()
+CLICKHOUSE_DATABASE = os.environ.get("CLICKHOUSE_DATABASE", chs.PIPELINES["owm"]["default_database"])
+CLICKHOUSE_AUTO_CREATE_SCHEMA = chs.env_bool("CLICKHOUSE_AUTO_CREATE_SCHEMA", True)
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "300"))
 
 OWM_API_URL = "https://api.openweathermap.org/data/2.5/weather"
@@ -97,8 +111,6 @@ NWS_SEVERITY_RANK = {"Extreme": 4, "Severe": 3, "Moderate": 2, "Minor": 1, "Unkn
 
 REQUIRED_ENV = {
     "OWM_API_KEY": OWM_API_KEY,
-    "INFLUX_TOKEN": INFLUX_TOKEN,
-    "INFLUX_ORG": INFLUX_ORG,
 }
 
 
@@ -122,6 +134,11 @@ def validate_config():
     if not OWM_LOCATIONS:
         log.error("No locations configured - set OWM_LOCATIONS (semicolon-separated)")
         sys.exit(1)
+    try:
+        chs.validate_ident(CLICKHOUSE_DATABASE)
+    except ValueError as e:
+        log.error("CLICKHOUSE_DATABASE: %s", e)
+        sys.exit(1)
 
 
 def fetch_weather(location_query):
@@ -138,7 +155,8 @@ def parse_state(location_query):
     return query_parts[1] if len(query_parts) >= 3 else ""
 
 
-def build_points(location_query, data):
+def build_row(location_query, data):
+    """Turn one Current Weather Data response into an owm_observations row."""
     main = data.get("main", {})
     wind = data.get("wind", {})
     clouds = data.get("clouds", {})
@@ -147,23 +165,19 @@ def build_points(location_query, data):
     sys_info = data.get("sys", {})
     weather_list = data.get("weather", [])
     weather = weather_list[0] if weather_list else {}
-
-    city_name = data.get("name", location_query)
-    country = sys_info.get("country", "")
     coord = data.get("coord", {})
-    state = parse_state(location_query)
 
-    point = Point("owm_observations").tag("location", location_query)
-    if city_name:
-        point = point.tag("city_name", city_name)
-    if state:
-        point = point.tag("state", state)
-    if country:
-        point = point.tag("country", country)
-    if weather.get("main"):
-        point = point.field("weather_main", weather["main"])
-    if weather.get("description"):
-        point = point.field("weather_description", weather["description"])
+    dt = data.get("dt")
+    row = {
+        # OWM's own observation timestamp; fall back to now if it's missing
+        "time": int(dt) if dt is not None else int(time.time()),
+        "location": location_query,
+        "city_name": data.get("name") or location_query,
+        "state": parse_state(location_query),
+        "country": sys_info.get("country", ""),
+        "weather_main": weather.get("main") or "",
+        "weather_description": weather.get("description") or "",
+    }
 
     numeric_fields = {
         "temp": main.get("temp"),
@@ -183,7 +197,7 @@ def build_points(location_query, data):
         if value is None:
             continue
         try:
-            point = point.field(field, float(value))
+            row[field] = float(value)
         except (TypeError, ValueError):
             log.debug("Skipping non-numeric field %s=%r for %s", field, value, location_query)
 
@@ -191,26 +205,22 @@ def build_points(location_query, data):
     pressure_hpa = main.get("pressure")
     if pressure_hpa is not None:
         pressure = _hpa_to_inhg(pressure_hpa) if OWM_UNITS == "imperial" else pressure_hpa
-        point = point.field("pressure", float(pressure))
+        row["pressure"] = float(pressure)
 
     visibility_m = data.get("visibility")
     if visibility_m is not None:
         visibility = _m_to_mi(visibility_m) if OWM_UNITS == "imperial" else visibility_m
-        point = point.field("visibility", float(visibility))
+        row["visibility"] = float(visibility)
 
     rain_1h = rain.get("1h")
     if rain_1h is not None:
-        point = point.field("rain_1h", float(_mm_to_in(rain_1h) if OWM_UNITS == "imperial" else rain_1h))
+        row["rain_1h"] = float(_mm_to_in(rain_1h) if OWM_UNITS == "imperial" else rain_1h)
 
     snow_1h = snow.get("1h")
     if snow_1h is not None:
-        point = point.field("snow_1h", float(_mm_to_in(snow_1h) if OWM_UNITS == "imperial" else snow_1h))
+        row["snow_1h"] = float(_mm_to_in(snow_1h) if OWM_UNITS == "imperial" else snow_1h)
 
-    dt = data.get("dt")
-    if dt is not None:
-        point = point.time(int(dt), WritePrecision.S)
-
-    return point
+    return row
 
 
 def fetch_nws_alerts(lat, lon):
@@ -225,56 +235,42 @@ def fetch_nws_alerts(lat, lon):
     return resp.json()
 
 
-def build_nws_points(location_query, city_name, state, country, alerts_json):
+def build_nws_rows(location_query, city_name, state, country, alerts_json, now=None):
     """
-    Build InfluxDB points from an NWS alerts response: one summary point
-    (alert_count, max_severity_rank) for easy dashboard threshold coloring,
-    plus one detail point per currently active alert.
+    Build rows from an NWS alerts response: one detail row per currently
+    active alert (owm_nws_alerts) plus one summary row (alert_count,
+    max_severity_rank) for easy dashboard threshold coloring
+    (owm_nws_alert_summary). Both are stamped with the poll time.
+    Returns (alert_rows, summary_row).
     """
-    points = []
     features = alerts_json.get("features", [])
-    now = datetime.utcnow()
+    now = int(time.time()) if now is None else now
+    common = {
+        "time": now,
+        "location": location_query,
+        "city_name": city_name or "",
+        "state": state or "",
+        "country": country or "",
+    }
     max_rank = 0
+    alert_rows = []
 
     for feature in features:
         props = feature.get("properties", {})
-        event = props.get("event", "Unknown")
-        severity = props.get("severity", "Unknown")
+        severity = props.get("severity") or "Unknown"
         max_rank = max(max_rank, NWS_SEVERITY_RANK.get(severity, 0))
+        alert_rows.append({
+            **common,
+            "event": props.get("event") or "Unknown",
+            "severity": severity,
+            "headline": props.get("headline") or "",
+            "urgency": props.get("urgency") or "Unknown",
+            "expires": props.get("expires") or "",
+            "active": 1,
+        })
 
-        point = (
-            Point("owm_nws_alerts")
-            .tag("location", location_query)
-            .tag("event", event)
-            .tag("severity", severity)
-        )
-        if city_name:
-            point = point.tag("city_name", city_name)
-        if state:
-            point = point.tag("state", state)
-        if country:
-            point = point.tag("country", country)
-
-        point = point.field("headline", props.get("headline", ""))
-        point = point.field("urgency", props.get("urgency", "Unknown"))
-        point = point.field("expires", props.get("expires", ""))
-        point = point.field("active", 1)
-        point = point.time(now, WritePrecision.S)
-        points.append(point)
-
-    summary_point = Point("owm_nws_alert_summary").tag("location", location_query)
-    if city_name:
-        summary_point = summary_point.tag("city_name", city_name)
-    if state:
-        summary_point = summary_point.tag("state", state)
-    if country:
-        summary_point = summary_point.tag("country", country)
-    summary_point = summary_point.field("alert_count", len(features))
-    summary_point = summary_point.field("max_severity_rank", max_rank)
-    summary_point = summary_point.time(now, WritePrecision.S)
-    points.append(summary_point)
-
-    return points
+    summary_row = {**common, "alert_count": len(features), "max_severity_rank": max_rank}
+    return alert_rows, summary_row
 
 
 def check_owm_api():
@@ -324,26 +320,36 @@ def check_owm_api():
     return False, "; ".join(messages) if messages else "no locations configured"
 
 
-def check_influxdb(client):
-    """Verify InfluxDB is reachable and the token can actually write to the bucket."""
+def check_clickhouse(client):
+    """
+    Verify ClickHouse is reachable and the user can actually insert into the
+    database (real test insert into poller_healthcheck, so it works for an
+    INSERT-only user).
+    """
     try:
         if not client.ping():
-            return False, "InfluxDB did not respond to ping"
+            return False, "ClickHouse did not respond to ping"
     except Exception as e:
-        return False, f"could not reach InfluxDB: {e}"
+        return False, f"could not reach ClickHouse: {e}"
+
+    if CLICKHOUSE_AUTO_CREATE_SCHEMA:
+        try:
+            chs.ensure_schema(client, "owm", CLICKHOUSE_DATABASE)
+        except Exception as e:
+            log.warning(
+                "Could not create/verify schema in '%s' (%s) - continuing in case it already exists. "
+                "Set CLICKHOUSE_AUTO_CREATE_SCHEMA=false if this user intentionally lacks CREATE.",
+                CLICKHOUSE_DATABASE, e,
+            )
 
     try:
-        write_api = client.write_api(write_options=SYNCHRONOUS)
-        check_point = (
-            Point("owm_poller_healthcheck")
-            .tag("check", "startup")
-            .field("value", 1)
-        )
-        write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=check_point)
+        chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.POLLER_HEALTHCHECK, [
+            {"time": int(time.time()), "poller": "owm", "detail": "startup"},
+        ])
     except Exception as e:
         return False, (
-            f"test write to bucket '{INFLUX_BUCKET}' in org '{INFLUX_ORG}' failed: {e} "
-            "(check token write permission, org name, and bucket name)"
+            f"test insert into '{CLICKHOUSE_DATABASE}.{chs.POLLER_HEALTHCHECK.name}' failed: {e} "
+            "(check the user's INSERT grant, the database name, and that the schema exists)"
         )
 
     return True, "ok"
@@ -352,15 +358,15 @@ def check_influxdb(client):
 def run_startup_checks(client, max_attempts=5, base_delay=5):
     """Run connectivity checks before entering the poll loop, retrying with backoff."""
     for attempt in range(1, max_attempts + 1):
-        influx_ok, influx_msg = check_influxdb(client)
+        ch_ok, ch_msg = check_clickhouse(client)
         owm_ok, owm_msg = check_owm_api()
 
-        if influx_ok and owm_ok:
-            log.info("Startup checks passed: InfluxDB reachable, OpenWeatherMap API reachable (%s)", owm_msg)
+        if ch_ok and owm_ok:
+            log.info("Startup checks passed: ClickHouse writable, OpenWeatherMap API reachable (%s)", owm_msg)
             return True
 
-        if not influx_ok:
-            log.warning("[Attempt %d/%d] InfluxDB check failed: %s", attempt, max_attempts, influx_msg)
+        if not ch_ok:
+            log.warning("[Attempt %d/%d] ClickHouse check failed: %s", attempt, max_attempts, ch_msg)
         if not owm_ok:
             log.warning("[Attempt %d/%d] OpenWeatherMap check failed: %s", attempt, max_attempts, owm_msg)
 
@@ -372,32 +378,44 @@ def run_startup_checks(client, max_attempts=5, base_delay=5):
     return False
 
 
+def write_batch(client, obs_rows, alert_rows, summary_rows):
+    written = 0
+    written += chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.OWM_OBSERVATIONS, obs_rows)
+    written += chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.OWM_NWS_ALERTS, alert_rows)
+    written += chs.insert_rows(client, CLICKHOUSE_DATABASE, chs.OWM_NWS_ALERT_SUMMARY, summary_rows)
+    return written
+
+
 def main():
     validate_config()
     log.info(
-        "Starting OpenWeatherMap poller: locations=%s influx=%s bucket=%s interval=%ss units=%s nws_alerts=%s",
-        "; ".join(OWM_LOCATIONS), INFLUX_URL, INFLUX_BUCKET, POLL_INTERVAL, OWM_UNITS, NWS_ALERTS_ENABLED,
+        "Starting OpenWeatherMap poller: locations=%s clickhouse=%s database=%s interval=%ss units=%s nws_alerts=%s",
+        "; ".join(OWM_LOCATIONS), chs.describe(CLICKHOUSE), CLICKHOUSE_DATABASE, POLL_INTERVAL, OWM_UNITS,
+        NWS_ALERTS_ENABLED,
     )
 
-    client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=INFLUX_ORG)
+    try:
+        client = chs.get_client(CLICKHOUSE)
+    except Exception as e:
+        # get_client() connects immediately; exit so systemd can restart/back off
+        log.error("Could not connect to ClickHouse at %s: %s", chs.describe(CLICKHOUSE), e)
+        sys.exit(1)
 
     if not run_startup_checks(client):
         log.error("Startup checks failed after multiple attempts - exiting so systemd can restart/back off")
         client.close()
         sys.exit(1)
 
-    write_api = client.write_api(write_options=SYNCHRONOUS)
     last_nws_poll = 0.0
 
     while True:
-        all_points = []
+        obs_rows, alert_rows, summary_rows = [], [], []
         do_nws_poll = NWS_ALERTS_ENABLED and (time.time() - last_nws_poll >= NWS_POLL_INTERVAL)
 
         for location_query in OWM_LOCATIONS:
             try:
                 data = fetch_weather(location_query)
-                point = build_points(location_query, data)
-                all_points.append(point)
+                obs_rows.append(build_row(location_query, data))
 
                 if do_nws_poll:
                     coord = data.get("coord", {})
@@ -409,8 +427,9 @@ def main():
                             state = parse_state(location_query)
                             country = data.get("sys", {}).get("country", "")
                             alerts_json = fetch_nws_alerts(lat, lon)
-                            nws_points = build_nws_points(location_query, city_name, state, country, alerts_json)
-                            all_points.extend(nws_points)
+                            alerts, summary = build_nws_rows(location_query, city_name, state, country, alerts_json)
+                            alert_rows.extend(alerts)
+                            summary_rows.append(summary)
                         except requests.exceptions.RequestException as e:
                             log.warning("NWS alerts fetch failed for '%s': %s", location_query, e)
                         except Exception as e:
@@ -423,12 +442,12 @@ def main():
         if do_nws_poll:
             last_nws_poll = time.time()
 
-        if all_points:
+        if obs_rows or alert_rows or summary_rows:
             try:
-                write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=all_points)
-                log.info("Wrote %d point(s) to InfluxDB across %d location(s)", len(all_points), len(OWM_LOCATIONS))
+                written = write_batch(client, obs_rows, alert_rows, summary_rows)
+                log.info("Wrote %d row(s) to ClickHouse across %d location(s)", written, len(OWM_LOCATIONS))
             except Exception as e:
-                log.exception("Failed to write points to InfluxDB: %s", e)
+                log.exception("Failed to write rows to ClickHouse: %s", e)
         else:
             log.warning("No observations collected this poll across any location")
 

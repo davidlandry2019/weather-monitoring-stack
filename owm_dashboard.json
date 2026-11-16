@@ -1,12 +1,19 @@
 {
   "__inputs": [
     {
-      "name": "DS_INFLUXDB",
-      "label": "InfluxDB",
-      "description": "InfluxDB datasource pointing at your weathermap bucket",
+      "name": "DS_CLICKHOUSE",
+      "label": "ClickHouse",
+      "description": "ClickHouse datasource holding the OpenWeatherMap tables",
       "type": "datasource",
-      "pluginId": "influxdb",
-      "pluginName": "InfluxDB"
+      "pluginId": "grafana-clickhouse-datasource",
+      "pluginName": "ClickHouse"
+    },
+    {
+      "name": "VAR_DATABASE",
+      "label": "ClickHouse database",
+      "description": "Database the OpenWeatherMap poller writes to (CLICKHOUSE_DATABASE)",
+      "type": "constant",
+      "value": "weathermap"
     }
   ],
   "__requires": [
@@ -18,9 +25,9 @@
     },
     {
       "type": "datasource",
-      "id": "influxdb",
-      "name": "InfluxDB",
-      "version": "1.0.0"
+      "id": "grafana-clickhouse-datasource",
+      "name": "ClickHouse",
+      "version": "4.0.0"
     },
     {
       "type": "panel",
@@ -42,14 +49,33 @@
   "templating": {
     "list": [
       {
+        "type": "constant",
+        "name": "database",
+        "label": "ClickHouse database",
+        "hide": 2,
+        "query": "${VAR_DATABASE}",
+        "current": {
+          "text": "${VAR_DATABASE}",
+          "value": "${VAR_DATABASE}"
+        },
+        "options": [
+          {
+            "text": "${VAR_DATABASE}",
+            "value": "${VAR_DATABASE}",
+            "selected": true
+          }
+        ],
+        "skipUrlSync": false
+      },
+      {
         "name": "location",
         "label": "Location",
         "type": "query",
         "datasource": {
-          "type": "influxdb",
-          "uid": "${DS_INFLUXDB}"
+          "type": "grafana-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
         },
-        "query": "import \"influxdata/influxdb/schema\"\nschema.tagValues(bucket: \"weathermap\", tag: \"location\")",
+        "query": "SELECT DISTINCT location FROM ${database}.owm_observations WHERE time >= now() - INTERVAL 30 DAY ORDER BY location",
         "multi": false,
         "includeAll": true,
         "current": {
@@ -57,7 +83,8 @@
           "value": "$__all"
         },
         "refresh": 2,
-        "sort": 1
+        "sort": 1,
+        "definition": "SELECT DISTINCT location FROM ${database}.owm_observations WHERE time >= now() - INTERVAL 30 DAY ORDER BY location"
       }
     ]
   },
@@ -73,8 +100,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -114,8 +141,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r._field == \"temp\")\n  |> last()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, city_name, state, v AS temp\nFROM (\n  SELECT max(time) AS last_seen, location, city_name, state, argMaxIf(temp, time, temp IS NOT NULL) AS v\n  FROM ${database}.owm_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND temp IS NOT NULL\n  GROUP BY location, city_name, state\n)\nORDER BY last_seen"
         }
       ]
     },
@@ -130,8 +165,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -171,8 +206,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r._field == \"wind_speed\" or r._field == \"wind_gust\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"location\", \"city_name\", \"state\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with wind: if exists r.wind_gust and r.wind_gust > r.wind_speed then r.wind_gust else r.wind_speed }))\n  |> keep(columns: [\"city_name\", \"state\", \"wind\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "-- Gust when it's reported and higher than sustained wind, else sustained\nSELECT last_seen, city_name, state, if(v_gust IS NOT NULL AND v_gust > v_speed, v_gust, v_speed) AS wind\nFROM (\n  SELECT max(time) AS last_seen, location, city_name, state,\n         argMaxIf(wind_speed, time, wind_speed IS NOT NULL) AS v_speed,\n         argMaxIf(wind_gust, time, wind_gust IS NOT NULL) AS v_gust\n  FROM ${database}.owm_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR\n  GROUP BY location, city_name, state\n  HAVING v_speed IS NOT NULL\n)\nORDER BY last_seen"
         }
       ]
     },
@@ -187,8 +230,8 @@
         "y": 0
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -232,8 +275,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r._field == \"temp\")\n  |> last()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen, city_name, state, v AS temp\nFROM (\n  SELECT max(time) AS last_seen, location, city_name, state, argMaxIf(temp, time, temp IS NOT NULL) AS v\n  FROM ${database}.owm_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND temp IS NOT NULL\n  GROUP BY location, city_name, state\n)\nORDER BY last_seen"
         }
       ]
     },
@@ -248,13 +299,21 @@
         "y": 16
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: -6h)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n    |> filter(fn: (r) => r._field == \"latitude\" or r._field == \"longitude\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"location\", \"city_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"_time\", \"location\", \"city_name\", \"latitude\", \"longitude\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT last_seen AS time, location, v_city_name AS city_name, v_lat AS latitude, v_lon AS longitude\nFROM (\n  SELECT location,\n         max(time) AS last_seen,\n         argMax(city_name, time) AS v_city_name,\n         argMaxIf(latitude, time, latitude IS NOT NULL) AS v_lat,\n         argMaxIf(longitude, time, longitude IS NOT NULL) AS v_lon\n  FROM ${database}.owm_observations\n  WHERE time >= now() - INTERVAL 6 HOUR AND latitude IS NOT NULL AND longitude IS NOT NULL\n  GROUP BY location\n)"
         }
       ],
       "options": {
@@ -372,13 +431,21 @@
         }
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"temp\" or r._field == \"feels_like\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, city_name, state, v_temp AS temp, v_feels_like AS feels_like\nFROM (\n  SELECT $__timeInterval(time) AS t, location, city_name, state,\n         avg(temp) AS v_temp,\n avg(feels_like) AS v_feels_like\n  FROM ${database}.owm_observations FINAL\n  WHERE $__timeFilter(time) AND location IN (${location:singlequote})\n  GROUP BY t, location, city_name, state\n)\nORDER BY t"
         }
       ]
     },
@@ -413,13 +480,21 @@
         }
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"humidity\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, city_name, state, v_humidity AS humidity\nFROM (\n  SELECT $__timeInterval(time) AS t, location, city_name, state,\n         avg(humidity) AS v_humidity\n  FROM ${database}.owm_observations FINAL\n  WHERE $__timeFilter(time) AND location IN (${location:singlequote})\n  GROUP BY t, location, city_name, state\n)\nORDER BY t"
         }
       ]
     },
@@ -452,13 +527,21 @@
         }
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"wind_speed\" or r._field == \"wind_gust\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, city_name, state, v_wind_speed AS wind_speed, v_wind_gust AS wind_gust\nFROM (\n  SELECT $__timeInterval(time) AS t, location, city_name, state,\n         avg(wind_speed) AS v_wind_speed,\n avg(wind_gust) AS v_wind_gust\n  FROM ${database}.owm_observations FINAL\n  WHERE $__timeFilter(time) AND location IN (${location:singlequote})\n  GROUP BY t, location, city_name, state\n)\nORDER BY t"
         }
       ]
     },
@@ -491,13 +574,21 @@
         }
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"pressure\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, city_name, state, v_pressure AS pressure\nFROM (\n  SELECT $__timeInterval(time) AS t, location, city_name, state,\n         avg(pressure) AS v_pressure\n  FROM ${database}.owm_observations FINAL\n  WHERE $__timeFilter(time) AND location IN (${location:singlequote})\n  GROUP BY t, location, city_name, state\n)\nORDER BY t"
         }
       ]
     },
@@ -530,13 +621,21 @@
         }
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"clouds_all\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, city_name, state, v_clouds_all AS clouds_all\nFROM (\n  SELECT $__timeInterval(time) AS t, location, city_name, state,\n         avg(clouds_all) AS v_clouds_all\n  FROM ${database}.owm_observations FINAL\n  WHERE $__timeFilter(time) AND location IN (${location:singlequote})\n  GROUP BY t, location, city_name, state\n)\nORDER BY t"
         }
       ]
     },
@@ -567,13 +666,21 @@
         }
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"visibility\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "queryType": "timeseries",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT t, city_name, state, v_visibility AS visibility\nFROM (\n  SELECT $__timeInterval(time) AS t, location, city_name, state,\n         avg(visibility) AS v_visibility\n  FROM ${database}.owm_observations FINAL\n  WHERE $__timeFilter(time) AND location IN (${location:singlequote})\n  GROUP BY t, location, city_name, state\n)\nORDER BY t"
         }
       ]
     },
@@ -588,8 +695,8 @@
         "y": 41
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {},
@@ -597,8 +704,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: -1h)\n  |> filter(fn: (r) => r._measurement == \"owm_observations\")\n  |> filter(fn: (r) => r.location =~ /^${location:regex}$/)\n  |> filter(fn: (r) => r._field == \"temp\" or r._field == \"humidity\" or r._field == \"weather_main\" or r._field == \"weather_description\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"location\", \"city_name\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> keep(columns: [\"city_name\", \"weather_main\", \"weather_description\", \"temp\", \"humidity\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT v_city_name AS city_name, v_main AS weather_main, v_desc AS weather_description,\n       v_temp AS temp, v_humidity AS humidity\nFROM (\n  SELECT location,\n         argMax(city_name, time) AS v_city_name,\n         argMaxIf(weather_main, time, weather_main != '') AS v_main,\n         argMaxIf(weather_description, time, weather_description != '') AS v_desc,\n         argMaxIf(temp, time, temp IS NOT NULL) AS v_temp,\n         argMaxIf(humidity, time, humidity IS NOT NULL) AS v_humidity\n  FROM ${database}.owm_observations FINAL\n  WHERE time >= now() - INTERVAL 1 HOUR AND location IN (${location:singlequote})\n  GROUP BY location\n)\nORDER BY city_name"
         }
       ]
     },
@@ -613,8 +728,8 @@
         "y": 10
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {},
@@ -715,8 +830,16 @@
       },
       "targets": [
         {
-          "query": "from(bucket: \"weathermap\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"owm_nws_alerts\")\n  |> filter(fn: (r) => r._field == \"headline\" or r._field == \"urgency\" or r._field == \"expires\")\n  |> last()\n  |> pivot(rowKey: [\"_time\", \"location\", \"event\", \"severity\", \"city_name\", \"state\", \"country\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> group()\n  |> map(fn: (r) => ({ r with city_name: r.city_name + \", \" + r.state + \" (\" + r.country + \")\" }))\n  |> keep(columns: [\"city_name\", \"severity\", \"event\", \"urgency\", \"expires\", \"headline\"])",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "SELECT concat(v_city, ', ', v_state, ' (', v_country, ')') AS city_name,\n       severity, event, v_urgency AS urgency, v_expires AS expires, v_headline AS headline\nFROM (\n  SELECT location, city_name AS v_city, state AS v_state, country AS v_country, event, severity,\n         argMax(urgency, time) AS v_urgency,\n         argMax(expires, time) AS v_expires,\n         argMax(headline, time) AS v_headline\n  FROM ${database}.owm_nws_alerts\n  WHERE time >= now() - INTERVAL 30 MINUTE\n  GROUP BY location, v_city, v_state, v_country, event, severity\n)\nORDER BY city_name, event"
         }
       ],
       "transformations": [
@@ -748,8 +871,8 @@
         "y": 4
       },
       "datasource": {
-        "type": "influxdb",
-        "uid": "${DS_INFLUXDB}"
+        "type": "grafana-clickhouse-datasource",
+        "uid": "${DS_CLICKHOUSE}"
       },
       "fieldConfig": {
         "defaults": {
@@ -905,8 +1028,16 @@
       "options": {},
       "targets": [
         {
-          "query": "import \"array\"\n\nreal = from(bucket: \"weathermap\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r._measurement == \"owm_nws_alerts\")\n  |> filter(fn: (r) => r._field == \"active\")\n  |> group(columns: [\"city_name\", \"state\", \"country\", \"severity\", \"event\"])\n  |> last()\n  |> group(columns: [\"city_name\", \"state\", \"country\", \"severity\"])\n  |> count()\n  |> group()\n  |> map(fn: (r) => ({ location: r.city_name + \", \" + r.state + \" (\" + r.country + \")\", severity: r.severity, _value: r._value }))\n\nscaffold = array.from(rows: [\n  {location: \"__scaffold__\", severity: \"Minor\", _value: 0},\n  {location: \"__scaffold__\", severity: \"Moderate\", _value: 0},\n  {location: \"__scaffold__\", severity: \"Severe\", _value: 0},\n  {location: \"__scaffold__\", severity: \"Extreme\", _value: 0},\n])\n\nunion(tables: [real, scaffold])\n  |> pivot(rowKey: [\"location\"], columnKey: [\"severity\"], valueColumn: \"_value\")\n  |> filter(fn: (r) => r.location != \"__scaffold__\")\n  |> group()",
-          "refId": "A"
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "${DS_CLICKHOUSE}"
+          },
+          "editorType": "sql",
+          "format": 1,
+          "queryType": "table",
+          "pluginVersion": "4.0.0",
+          "rawSql": "-- Distinct active alert events per location, split by severity\nSELECT concat(city_name, ', ', state, ' (', country, ')') AS place,\n       uniqExactIf(event, severity = 'Minor') AS Minor,\n       uniqExactIf(event, severity = 'Moderate') AS Moderate,\n       uniqExactIf(event, severity = 'Severe') AS Severe,\n       uniqExactIf(event, severity = 'Extreme') AS Extreme\nFROM ${database}.owm_nws_alerts\nWHERE time >= now() - INTERVAL 30 MINUTE\nGROUP BY city_name, state, country\nORDER BY place"
         }
       ],
       "transformations": [
@@ -914,14 +1045,16 @@
           "id": "organize",
           "options": {
             "indexByName": {
-              "location": 0,
               "Minor": 1,
               "Moderate": 2,
               "Severe": 3,
-              "Extreme": 4
+              "Extreme": 4,
+              "place": 0
             },
             "excludeByName": {},
-            "renameByName": {}
+            "renameByName": {
+              "place": "location"
+            }
           }
         }
       ]

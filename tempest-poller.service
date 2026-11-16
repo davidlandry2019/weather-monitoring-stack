@@ -1,6 +1,6 @@
 [Unit]
 Description=Tempest Weather Station Poller
-After=network-online.target influxdb.service
+After=network-online.target clickhouse-server.service
 Wants=network-online.target
 
 [Service]
@@ -8,7 +8,7 @@ Type=simple
 User=tempest
 Group=tempest
 EnvironmentFile=/opt/scripts/tempest-poller/tempest-poller.env
-ExecStart=/opt/scripts/tempest-poller/venv/bin/python3 /opt/scripts/tempest-poller/tempest-poller.py
+ExecStart=/opt/scripts/tempest-poller/venv/bin/python3 /opt/scripts/tempest-poller/tempest_poller.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal

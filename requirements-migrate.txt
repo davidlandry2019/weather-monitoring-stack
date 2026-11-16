@@ -1,0 +1,4 @@
+# Only needed for the one-off InfluxDB -> ClickHouse migration
+# (migrate_influx_to_clickhouse.py), not for running the pollers.
+-r requirements.txt
+influxdb-client>=1.40.0

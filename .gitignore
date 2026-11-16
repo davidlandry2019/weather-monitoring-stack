@@ -8,3 +8,8 @@ venv/
 
 # IntelliJ IDEA project files
 .idea/
+
+# Influx -> ClickHouse migration progress files
+migration_state_*.json
+migration_state_*.json.tmp
+.pytest_cache/

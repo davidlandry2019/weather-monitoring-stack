@@ -1,12 +1,17 @@
 # Weather Monitoring Stack
 
-Two independent data pipelines feeding a shared InfluxDB instance and Grafana:
+Two independent data pipelines feeding a shared ClickHouse server and Grafana:
 
 - **Tempest** — polls your own WeatherFlow Tempest station(s) directly
 - **OpenWeatherMap** — polls current conditions for defined openweathermap locations
 
 Both pipelines also independently check the National Weather Service for
 active severe weather alerts at their respective locations.
+
+> **Upgrading from the InfluxDB version?** The stack moved from InfluxDB/Flux
+> to ClickHouse/SQL in v2.0 (Flux is in maintenance mode and unsupported in
+> InfluxDB 3). [`MIGRATION.md`](MIGRATION.md) covers the cutover and copying
+> your history across with the included migration tool.
 
 See the [Releases page](https://github.com/davidlandry2019/weather-monitoring-stack/releases) for tagged versions.
 
@@ -16,12 +21,13 @@ See the [Releases page](https://github.com/davidlandry2019/weather-monitoring-st
 
 This shows the data flow, not physical hosts — each poller independently
 calls its own weather API plus NWS for alerts, and both write into the same
-InfluxDB instance under separate buckets (`tempest`, `weathermap`), which
-Grafana queries to render its dashboards.
+ClickHouse server under separate databases (`tempest`, `weathermap` - or one
+shared database if you prefer), which Grafana queries with SQL to render its
+dashboards.
 
 - **NWS alerts are polled by both pollers independently**, each on its own
   5-minute cycle, rather than as a shared/deduplicated service.
-- **Where things actually run**: the two pollers and InfluxDB can live on
+- **Where things actually run**: the two pollers and ClickHouse can live on
   one host or be split across multiple; Grafana can be the same host or a
   separate one. This repo doesn't assume a specific physical layout —
   see `SETUP-TEMPEST.md` / `SETUP-OWM.md` for what each piece actually needs.
@@ -29,8 +35,9 @@ Grafana queries to render its dashboards.
 ## Recommended versions
 
 - **OS**: Linux with systemd (Ubuntu/Debian recommended) for the poller hosts
-- **InfluxDB**: 2.x
-- **Grafana**: 8+ (needs the InfluxDB Flux data source)
+- **Python**: 3.8+ for the pollers
+- **ClickHouse**: any currently supported release (LTS recommended)
+- **Grafana**: 10+ with the ClickHouse data source plugin (`grafana-clickhouse-datasource` v4+)
 
 See `SETUP-TEMPEST.md` / `SETUP-OWM.md` for full system requirements.
 
@@ -48,8 +55,9 @@ placeholder data.
 
 ## Setup guides
 
-- [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) — Tempest poller, InfluxDB, and the Tempest Grafana dashboard
+- [`SETUP-TEMPEST.md`](SETUP-TEMPEST.md) — Tempest poller, ClickHouse install, and the Tempest Grafana dashboard
 - [`SETUP-OWM.md`](SETUP-OWM.md) — OpenWeatherMap poller and its Grafana dashboard
+- [`MIGRATION.md`](MIGRATION.md) — moving an existing InfluxDB install (and its history) to ClickHouse
 
 ## License
 
@@ -63,15 +71,19 @@ If this project is useful to you, consider [buying me a coffee](https://paypal.m
 
 | File | Purpose |
 |---|---|
-| `tempest_poller.py` | Polls WeatherFlow Tempest station(s) → InfluxDB |
+| `tempest_poller.py` | Polls WeatherFlow Tempest station(s) → ClickHouse |
 | `tempest-poller.env.example` | Config template for the Tempest poller |
 | `tempest-poller.service` | systemd unit for the Tempest poller |
 | `tempest_dashboard.json` | Grafana dashboard for Tempest data |
-| `owm_poller.py` | Polls OpenWeatherMap for configured cities → InfluxDB |
+| `owm_poller.py` | Polls OpenWeatherMap for configured cities → ClickHouse |
 | `owm-poller.env.example` | Config template for the OpenWeatherMap poller |
 | `owm-poller.service` | systemd unit for the OpenWeatherMap poller |
 | `owm_dashboard.json` | Grafana dashboard for OpenWeatherMap data |
+| `clickhouse_schema.py` | Shared ClickHouse table definitions; also a CLI to create/print the schema (deploy it next to each poller) |
 | `requirements.txt` | Shared Python dependencies for both pollers |
+| `migrate_influx_to_clickhouse.py` | One-off InfluxDB 2.x → ClickHouse history migration with row-by-row verification |
+| `requirements-migrate.txt` | Extra dependency (`influxdb-client`) for the migration tool |
+| `tests/` | Unit tests (`pip install pytest -r requirements-migrate.txt && pytest`) |
 | `deployment-architecture.svg` | Architecture diagram (this README) |
 | `tempest-dashboard-preview.svg` | Tempest dashboard mockup (this README) |
 | `owm-dashboard-preview.svg` | OpenWeatherMap dashboard mockup (this README) |
